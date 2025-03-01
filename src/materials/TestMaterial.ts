@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import vertexShader from "../glsl/test-shader/main2.vert";
 import fragmentShader from "../glsl/test-shader/main2.frag";
+import { stripVersion } from "./MaterialUtils";
 
 export class TestMaterial extends THREE.RawShaderMaterial {
   private _clock: THREE.Clock;
@@ -12,8 +13,8 @@ export class TestMaterial extends THREE.RawShaderMaterial {
         uColor: { value: new THREE.Color(0x00cccc) },
         // baseColor: { value: new THREE.Color("red") },
       },
-      vertexShader,
-      fragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3,
       side: THREE.DoubleSide, // Render both sides
       transparent: true,

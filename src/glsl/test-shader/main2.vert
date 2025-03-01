@@ -1,4 +1,4 @@
-// #version 300 es
+#version 300 es
 
 // Input attributes - these must match Three.js attribute names
 in vec3 position;

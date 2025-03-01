@@ -1,4 +1,4 @@
-// #version 300 es
+#version 300 es
 
 // Fragment shaders must specify precision
 precision highp float;
