@@ -11,12 +11,13 @@ in vec3 vPosition;
 // Uniforms for appearance customization
 uniform float uTime;
 uniform vec3 uBaseColor;
-uniform vec3 uRingsForegroundColor;
-uniform vec3 uRingsBackgroundColor;
+uniform vec3 uRingBarForegroundColor;
+uniform vec3 uRingBarBackgroundColor;
 uniform int uEvent;
 uniform float uEventIntensity;
 uniform float uStripeCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
+uniform float uAngle;
 
 // Output color
 out vec4 fragColor;
@@ -40,13 +41,12 @@ void main() {
     float rings = step(0.5, pattern);
 
     float g = clamp(600.0 * normalizedGaussian(radius, 0.0, 0.1), 0.0, 1.0);
-    vec3 gColor = vec3(1.0-g) * uBaseColor;
-    vec3 ringsForegroundColor = vec3((1.0 - rings)) * uRingsForegroundColor;
-    vec3 ringsBackgroundColor = vec3(rings) * uRingsBackgroundColor;
+    vec3 gZeroColor = vec3(1.0-g) * uBaseColor;
+    vec3 ringsForegroundColor = vec3((1.0 - rings)) * uRingBarForegroundColor;
+    vec3 ringsBackgroundColor = vec3(rings) * uRingBarBackgroundColor;
 
 
-    // vec3 finalColor = mix(uBaseColor, gColor + vec3(g*rings), uEventIntensity);
-    vec3 finalColor = mix(uBaseColor, gColor + g*(ringsForegroundColor+ringsBackgroundColor), uEventIntensity);
+    vec3 finalColor = mix(uBaseColor,  gZeroColor + g*(ringsForegroundColor+ringsBackgroundColor-gZeroColor), uEventIntensity);
     
     fragColor = vec4(finalColor, 1.0);
 }

@@ -11,10 +11,12 @@ in vec3 vPosition;
 // Uniforms for appearance customization
 uniform float uTime;
 uniform vec3 uBaseColor;
+uniform vec3 uRingBarForegroundColor;
+uniform vec3 uRingBarBackgroundColor;
 uniform int uEvent;
 uniform float uEventIntensity;
-uniform float uStripeCount;
-uniform vec2 uSpeed; // Speed in stripes per second (x, y)
+uniform float uStripeCount; // Number of stripes/rings
+uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
 
 // Output color
@@ -45,6 +47,12 @@ void main() {
     // and offset for movement at the defined speed
     float pattern = step(0.5, normalizedSin(initialPhase + 
                                  (rotatedUv.x + localSpeed.x) * uStripeCount * 2.0 * PI));
+
+    vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uRingBarForegroundColor;
+    vec3 ringsBackgroundColor = vec3(pattern) * uRingBarBackgroundColor;
+
+
+    vec3 finalColor = mix(uBaseColor,  (ringsForegroundColor+ringsBackgroundColor), uEventIntensity);
     
-    fragColor = vec4(getFloatColor(pattern), 1.0);
+    fragColor = vec4(finalColor, 1.0);
 }
