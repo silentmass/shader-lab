@@ -25,5 +25,6 @@ export class TestMaterialFlash extends THREE.RawShaderMaterial {
 
   update() {
     this.uniforms.uTime.value = this._clock.getElapsedTime();
+    return { updatedUniforms: [] };
   }
 }

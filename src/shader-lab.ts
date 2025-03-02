@@ -10,7 +10,7 @@ import { BackgroundPlane } from "./BackgroundPlane";
 import { GUIManager } from "./guimanager";
 
 interface CustomShaderMaterial extends THREE.RawShaderMaterial {
-  update: () => void;
+  update: (params?: any) => { updatedUniforms: string[] };
 }
 
 export class ShaderLab {
@@ -21,6 +21,7 @@ export class ShaderLab {
   private _customMaterials: CustomShaderMaterial[] = []; // Array to track custom materials for updates
   private _backgroundPlane: BackgroundPlane;
   private _guimanager: GUIManager;
+  private _planeMaterial: PlaneMaterial | null = null;
   public isBackgroundPlaneBlack: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -73,21 +74,16 @@ export class ShaderLab {
     this._scene.add(directionalLight);
 
     //   Use for testing plane
-
     this._camera.position.set(0.0, 0.0, 0.7);
-    // this._camera.lookAt(1.0, 1.0, 0.0);
     console.log(this._camera.rotation);
 
     // Use for testing objects
-
     // this._camera.position.set(8, 5, 5);
     // const controls = new OrbitControls(this._camera, this._renderer.domElement);
     // controls.update();
 
     // Load the models
-
     // this.loadModelAndCreateClone();
-
     // this.loadModelAndAddTextures();
 
     const axesHelper = new THREE.AxesHelper(5);
@@ -118,8 +114,15 @@ export class ShaderLab {
   private createPlane() {
     const geometry = new THREE.PlaneGeometry(1, 1);
     const material = new PlaneMaterial();
+    this._planeMaterial = material;
 
+    // Register the material for updates
     this._customMaterials.push(material);
+
+    // Add the material to GUI controls
+    this._guimanager.setPlaneMaterial(material);
+
+    // Create and add the plane to the scene
     const plane = new THREE.Mesh(geometry, material);
     plane.position.set(0, 0, 0);
     this._scene.add(plane);
@@ -330,6 +333,7 @@ export class ShaderLab {
   }
 
   private animate() {
+    // Check for background plane state changes
     if (
       this.isBackgroundPlaneBlack !==
       this._backgroundPlane.isBackgroundPlaneBlack
@@ -341,9 +345,24 @@ export class ShaderLab {
       }
     }
 
+    // Check if GUI controls have been changed
+    const guiControlsChanged = this._guimanager.hasControlsChanged();
+
+    // If GUI controls have changed, we can log the changes or perform specific actions
+    if (guiControlsChanged) {
+      console.log("GUI controls for plane material have been updated");
+      // You can add specific reactions to control changes here if needed
+    }
+
     // Update all custom shader materials
     for (const material of this._customMaterials) {
-      material.update();
+      const updateResult = material.update();
+
+      // We can check if any uniforms were updated during this frame
+      if (updateResult.updatedUniforms.length > 0) {
+        // Log or react to specific uniform updates if needed
+        // console.log("Updated uniforms:", updateResult.updatedUniforms);
+      }
     }
 
     this._statsManager.begin();
@@ -351,5 +370,10 @@ export class ShaderLab {
     this._statsManager.end();
 
     requestAnimationFrame(() => this.animate());
+  }
+
+  // Method to get the current PlaneMaterial instance
+  public get shader(): PlaneMaterial | null {
+    return this._planeMaterial;
   }
 }
