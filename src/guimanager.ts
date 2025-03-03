@@ -130,6 +130,17 @@ export class GUIManager {
         }
       },
 
+      get ringBarOpacity() {
+        return thisRef.planeMaterial?.getRingBarOpacity() || 1.0;
+      },
+      set ringBarOpacity(value: number) {
+        if (thisRef.planeMaterial) {
+          const changed = thisRef.planeMaterial.setRingBarOpacity(value);
+          if (changed) thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        }
+      },
+
       get eventIntensity() {
         return thisRef.planeMaterial?.getEventIntensity() || 1.0;
       },
@@ -219,6 +230,10 @@ export class GUIManager {
       .name("Ring Background");
 
     // Add numeric sliders
+    folderPlaneMaterial
+      .add(planeMaterialProps, "ringBarOpacity", 0, 1)
+      .name("Rings and Bars Opacity")
+      .step(0.01);
     folderPlaneMaterial
       .add(planeMaterialProps, "eventIntensity", 0, 1)
       .name("Event Intensity")

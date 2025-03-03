@@ -2,8 +2,8 @@ import * as THREE from "three";
 import vertexShader from "../glsl/plane-shader/main.vert";
 // import fragmentShader from "../glsl/plane-shader/main.frag";
 // import fragmentShader from "../glsl/plane-shader/gaussian.frag";
-// import fragmentShader from "../glsl/plane-shader/stripes.frag";
-import fragmentShader from "../glsl/plane-shader/concentricCircles.frag";
+import fragmentShader from "../glsl/plane-shader/stripes.frag";
+// import fragmentShader from "../glsl/plane-shader/concentricCircles.frag";
 import { stripVersion } from "./MaterialUtils";
 
 export class PlaneMaterial extends THREE.RawShaderMaterial {
@@ -13,8 +13,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _baseColor: THREE.Color = new THREE.Color("grey");
   private _ringBarForegroundColor: THREE.Color = new THREE.Color("blue");
   private _ringBarBackgroundColor: THREE.Color = new THREE.Color("red");
-  private _event: number = 0;
-  private _eventIntensity: number = 1.0;
+  private _ringBarOpacity: number = 1.0;
   private _stripeCount: number = 40.0;
   private _speed: THREE.Vector2 = new THREE.Vector2(-1.0, 0.0);
   private _angle: number = Math.PI / 1.0;
@@ -24,6 +23,9 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _eventStartTime: number = 0;
   private _eventDuration: number = 0;
   private _eventActive: boolean = false;
+  private _event: number = 0;
+  private _eventIntensity: number = 1.0;
+  private _eventProgress: number = 0.0;
 
   constructor() {
     super({
@@ -33,8 +35,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
         uBaseColor: { value: new THREE.Color("grey") },
         uRingBarForegroundColor: { value: new THREE.Color("blue") },
         uRingBarBackgroundColor: { value: new THREE.Color("red") },
+        uRingBarOpacity: { value: 1.0 },
         uEvent: { value: 0 },
         uEventIntensity: { value: 1.0 },
+        uEventProgress: { value: 0.0 },
         uStripeCount: { value: 40.0 },
         uSpeed: { value: new THREE.Vector2(-1.0, 0.0) },
         uAngle: { value: Math.PI / 1.0 },
@@ -122,6 +126,20 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       this._ringBarBackgroundColor = color.clone();
       this.uniforms.uRingBarBackgroundColor.value =
         this._ringBarBackgroundColor;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the event intensity uniform only if the value has changed
+   * @param intensity The new intensity value
+   * @returns Boolean indicating whether the uniform was updated
+   */
+  public setRingBarOpacity(opacity: number): boolean {
+    if (this._ringBarOpacity !== opacity) {
+      this._ringBarOpacity = opacity;
+      this.uniforms.uRingBarOpacity.value = this._ringBarOpacity;
       return true;
     }
     return false;
@@ -218,6 +236,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     baseColor?: THREE.Color;
     ringBarForegroundColor?: THREE.Color;
     ringBarBackgroundColor?: THREE.Color;
+    ringBarOpacity?: number;
     event?: number;
     eventIntensity?: number;
     stripeCount?: number;
@@ -236,10 +255,15 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
     // Check if a timed event needs to end
     if (this._eventActive) {
-      const elapsedEventTime = currentTime - this._eventStartTime;
-      if (elapsedEventTime >= this._eventDuration) {
+      this._eventProgress =
+        (currentTime - this._eventStartTime) / this._eventDuration;
+      this.uniforms.uEventProgress.value =
+        1.0 - Math.min(1.0, Math.max(0.0, this._eventProgress));
+
+      if (this._eventProgress >= 1.0) {
         this._eventActive = false;
-        this.setEvent(0); // Reset event to 0
+        this.setEvent(0);
+        this.uniforms.uEventProgress.value = 0.0;
         updatedUniforms.push("uEvent");
       }
     }
@@ -266,6 +290,13 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
         this.setRingBarBackgroundColor(params.ringBarBackgroundColor)
       ) {
         updatedUniforms.push("uRingBarBackgroundColor");
+      }
+
+      if (
+        params.ringBarOpacity &&
+        this.setRingBarOpacity(params.ringBarOpacity)
+      ) {
+        updatedUniforms.push("uRingBarOpacity");
       }
 
       if (params.event !== undefined && this.setEvent(params.event)) {
@@ -313,6 +344,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
   public getRingBarBackgroundColor(): THREE.Color {
     return this._ringBarBackgroundColor.clone();
+  }
+
+  public getRingBarOpacity(): number {
+    return this._ringBarOpacity;
   }
 
   public getEvent(): number {

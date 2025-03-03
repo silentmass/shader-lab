@@ -13,8 +13,10 @@ uniform float uTime;
 uniform vec3 uBaseColor;
 uniform vec3 uRingBarForegroundColor;
 uniform vec3 uRingBarBackgroundColor;
+uniform float uRingBarOpacity;
 uniform int uEvent;
 uniform float uEventIntensity;
+uniform float uEventProgress;
 uniform float uStripeCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
@@ -55,10 +57,12 @@ void main() {
     vec3 ringsBackgroundColor = vec3(pattern) * uRingBarBackgroundColor;
 
 
-    vec3 finalColor = mix(uBaseColor,  (ringsForegroundColor+ringsBackgroundColor), uEventIntensity);
+    vec3 finalColor = mix(uBaseColor,  (ringsForegroundColor+ringsBackgroundColor), uRingBarOpacity);
     
     if (uEvent == 1) {
-        fragColor = vec4(mix(mix(uBaseColor, cBlack, uEventIntensity), uBaseColor, texColor.x), 1.0);
+        vec3 textPlane = mix(uBaseColor, cBlack, texColor.x);
+        textPlane = mix(uBaseColor, textPlane, uEventIntensity);
+        fragColor = vec4(mix(finalColor,textPlane,  uEventProgress), 1.0);
     } else {
         fragColor = vec4(finalColor, 1.0);
     }
