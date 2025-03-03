@@ -18,6 +18,7 @@ uniform float uEventIntensity;
 uniform float uStripeCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
+uniform sampler2D uTexture; // Declare the texture uniform
 
 // Output color
 out vec4 fragColor;
@@ -25,8 +26,10 @@ out vec4 fragColor;
 #include ../utils/utils;
 
 void main() {
-    
+    vec4 texColor = texture(uTexture, vUv);
     float initialPhase = 0.0;
+
+    
 
     
     // Apply rotation to texture coordinates
@@ -54,5 +57,9 @@ void main() {
 
     vec3 finalColor = mix(uBaseColor,  (ringsForegroundColor+ringsBackgroundColor), uEventIntensity);
     
-    fragColor = vec4(finalColor, 1.0);
+    if (uEvent == 1) {
+        fragColor = vec4(mix(mix(uBaseColor, cBlack, uEventIntensity), uBaseColor, texColor.x), 1.0);
+    } else {
+        fragColor = vec4(finalColor, 1.0);
+    }
 }

@@ -179,12 +179,15 @@ export class GUIManager {
         }
       },
 
-      get angle() {
-        return thisRef.planeMaterial?.getAngle() || Math.PI;
+      // Angle as multiples of PI
+      get anglePiFraction() {
+        const angle = thisRef.planeMaterial?.getAngle() || Math.PI;
+        return angle / Math.PI;
       },
-      set angle(value: number) {
+      set anglePiFraction(value: number) {
         if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setAngle(value);
+          const actualAngle = value * Math.PI;
+          const changed = thisRef.planeMaterial.setAngle(actualAngle);
           if (changed) thisRef.planeControlsChanged = true;
           thisRef.returnFocusToRenderer();
         }
@@ -193,11 +196,9 @@ export class GUIManager {
       // Actions
       "Trigger Event": function () {
         if (thisRef.planeMaterial) {
-          // Set event value to trigger animation
-          const currentEvent = thisRef.planeMaterial.getEvent();
-          const nextEvent = currentEvent + 1;
-          const changed = thisRef.planeMaterial.setEvent(nextEvent);
-          if (changed) thisRef.planeControlsChanged = true;
+          // Trigger the timed event that lasts for 2 seconds
+          thisRef.planeMaterial.triggerTimedEvent(2.0);
+          thisRef.planeControlsChanged = true;
           thisRef.returnFocusToRenderer();
         }
       },
@@ -234,9 +235,9 @@ export class GUIManager {
 
     // Add angle control
     folderPlaneMaterial
-      .add(planeMaterialProps, "angle", 0, Math.PI * 2)
-      .name("Angle")
-      .step(0.01);
+      .add(planeMaterialProps, "anglePiFraction", 0, 2)
+      .name("Angle (× π)")
+      .step(0.125);
 
     // Add action button
     folderPlaneMaterial.add(planeMaterialProps, "Trigger Event");

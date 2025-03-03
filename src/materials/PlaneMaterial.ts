@@ -13,11 +13,17 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _baseColor: THREE.Color = new THREE.Color("grey");
   private _ringBarForegroundColor: THREE.Color = new THREE.Color("blue");
   private _ringBarBackgroundColor: THREE.Color = new THREE.Color("red");
-  private _event: number = 1;
+  private _event: number = 0;
   private _eventIntensity: number = 1.0;
   private _stripeCount: number = 40.0;
   private _speed: THREE.Vector2 = new THREE.Vector2(-1.0, 0.0);
   private _angle: number = Math.PI / 1.0;
+  private _texture: THREE.Texture | null = null;
+
+  // For timed events
+  private _eventStartTime: number = 0;
+  private _eventDuration: number = 0;
+  private _eventActive: boolean = false;
 
   constructor() {
     super({
@@ -27,11 +33,12 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
         uBaseColor: { value: new THREE.Color("grey") },
         uRingBarForegroundColor: { value: new THREE.Color("blue") },
         uRingBarBackgroundColor: { value: new THREE.Color("red") },
-        uEvent: { value: 1 },
+        uEvent: { value: 0 },
         uEventIntensity: { value: 1.0 },
         uStripeCount: { value: 40.0 },
         uSpeed: { value: new THREE.Vector2(-1.0, 0.0) },
         uAngle: { value: Math.PI / 1.0 },
+        uTexture: { value: null }, // This will hold our texture
       },
       vertexShader: stripVersion(vertexShader),
       fragmentShader: stripVersion(fragmentShader),
@@ -41,6 +48,25 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     });
     this._clock = new THREE.Clock();
     this._clock.start();
+
+    // Load the texture
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+      "/assets/images/stimulus.png",
+      (loadedTexture) => {
+        // Configure texture properties if needed
+        loadedTexture.wrapS = THREE.RepeatWrapping;
+        loadedTexture.wrapT = THREE.RepeatWrapping;
+
+        // Store the texture as a private variable
+        this._texture = loadedTexture;
+
+        // Update the uniform
+        this.uniforms.uTexture.value = this._texture;
+      },
+      () => console.log("Loading shader texture..."),
+      (error) => console.warn("Error loading shader texture", error)
+    );
   }
 
   /**
@@ -113,6 +139,17 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Triggers event 1 for a specified duration in seconds
+   * @param duration How long the event should last in seconds
+   */
+  public triggerTimedEvent(duration: number = 2.0): void {
+    this._eventStartTime = this._clock.getElapsedTime();
+    this._eventDuration = duration;
+    this._eventActive = true;
+    this.setEvent(1); // Set to event 1
   }
 
   /**
@@ -195,6 +232,16 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       this._time = currentTime;
       this.uniforms.uTime.value = this._time;
       updatedUniforms.push("uTime");
+    }
+
+    // Check if a timed event needs to end
+    if (this._eventActive) {
+      const elapsedEventTime = currentTime - this._eventStartTime;
+      if (elapsedEventTime >= this._eventDuration) {
+        this._eventActive = false;
+        this.setEvent(0); // Reset event to 0
+        updatedUniforms.push("uEvent");
+      }
     }
 
     // Update other uniforms if provided and only if they changed
