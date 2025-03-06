@@ -1,221 +1,297 @@
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+import * as THREE from "three";
 import { WebGLRenderer, Color, Vector2 } from "three";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
+import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 export class GUIManager {
-  private gui: GUI;
-  private parentRef: any; // Replace with your actual parent class type
-  private renderer: WebGLRenderer;
-  private planeMaterial: PlaneMaterial | null = null;
-  private planeControlsChanged: boolean = false;
+  private _gui: GUI;
+  private _parentRef: any; // Replace with your actual parent class type
+  private _renderer: WebGLRenderer;
+
+  private _planeMaterial: PlaneMaterial | null = null;
+  private _planeControlsChanged: boolean = false;
+  private _planeMaterials: Map<string, PlaneMaterial> = new Map();
+
+  // Material settings
+  private _mColor: THREE.Color = new THREE.Color("pink");
+  private _mBaseColor: THREE.Color = new THREE.Color("gray");
+  private _mRingBarForegroundColor: THREE.Color = new THREE.Color("black");
+  private _mRingBarBackgroundColor: THREE.Color = new THREE.Color("white");
+  private _mRingBarOpacity: number = 1.0;
+  private _mEvent: number = 0;
+  private _mEventIntensity: number = 1.0;
+  private _mBarRingCount: number = 10;
+  private _mBarRingSpeed: THREE.Vector2 = new THREE.Vector2(1.0, 0.0);
+  private _mBarRingAngle: number = 0.0;
+  private _mTriggerTimedEvent: number = 0.0;
 
   constructor(parentRef: any, renderer: WebGLRenderer) {
-    this.gui = new GUI();
-    this.parentRef = parentRef;
-    this.renderer = renderer;
+    this._gui = new GUI();
+    this._parentRef = parentRef;
+    this._renderer = renderer;
 
     this.setupBackgroundFolder();
   }
 
-  public setPlaneMaterial(material: PlaneMaterial): void {
-    this.planeMaterial = material;
-    this.setupPlaneMaterialFolder();
-  }
-
-  public hasControlsChanged(): boolean {
-    const changed = this.planeControlsChanged;
-    this.planeControlsChanged = false; // Reset the flag after checking
-    return changed;
-  }
-
   private setupBackgroundFolder(): void {
-    const folderBackgroundPlane = this.gui.addFolder("Background");
+    const folderBackgroundPlane = this._gui.addFolder("Background");
     const thisRef = this; // Reference to the GUIManager instance
 
     const propsBackgroundPlane = {
       get Black() {
-        return thisRef.parentRef.isBackgroundPlaneBlack;
+        return thisRef._parentRef.isBackgroundBlack;
       },
       set Black(v: boolean) {
-        thisRef.parentRef.isBackgroundPlaneBlack = v;
+        thisRef._parentRef.isBackgroundBlack = v;
         thisRef.returnFocusToRenderer();
       },
       Mode: "Shader", // Default value
-      "Trigger Stimulus": function () {
-        if (thisRef.parentRef.shader) {
-          thisRef.parentRef.shader.triggerStimulus();
-          thisRef.returnFocusToRenderer();
-        }
-      },
     };
 
     folderBackgroundPlane.add(propsBackgroundPlane, "Black");
-
-    folderBackgroundPlane.add(propsBackgroundPlane, "Trigger Stimulus");
   }
 
-  private setupPlaneMaterialFolder(): void {
-    if (!this.planeMaterial) return;
+  public get planeControlsChanged() {
+    const changed = this._planeControlsChanged;
+    this._planeControlsChanged = false;
+    return changed;
+  }
 
-    const folderPlaneMaterial = this.gui.addFolder("Plane Material");
+  public set planeControlsChanged(v: boolean) {
+    this._planeControlsChanged = v;
+  }
+
+  public get color(): THREE.Color {
+    return this._mColor;
+  }
+
+  public set color(v: string) {
+    this._mColor = new THREE.Color(v);
+  }
+
+  public get baseColor(): THREE.Color {
+    return this._mBaseColor;
+  }
+
+  public set baseColor(v: string) {
+    this._mBaseColor = new THREE.Color(v);
+  }
+
+  public get ringBarForegroundColor(): THREE.Color {
+    return this._mRingBarForegroundColor;
+  }
+
+  public set ringBarForegroundColor(v: string) {
+    this._mRingBarForegroundColor = new THREE.Color(v);
+  }
+
+  public get ringBarBackgroundColor(): THREE.Color {
+    return this._mRingBarBackgroundColor;
+  }
+
+  public set ringBarBackgroundColor(v: string) {
+    this._mRingBarBackgroundColor = new THREE.Color(v);
+  }
+
+  public get ringBarOpacity(): number {
+    return this._mRingBarOpacity;
+  }
+
+  public set ringBarOpacity(v: number) {
+    this._mRingBarOpacity = v;
+  }
+
+  public get event(): number {
+    return this._mEvent;
+  }
+
+  public set event(v: number) {
+    this._mEvent = v;
+  }
+
+  public get eventIntensity(): number {
+    return this._mEventIntensity;
+  }
+
+  public set eventIntensity(v: number) {
+    this._mEventIntensity = v;
+  }
+
+  public get barRingCount(): number {
+    return this._mBarRingCount;
+  }
+
+  public set barRingCount(v: number) {
+    this._mBarRingCount = v;
+  }
+
+  public get barRingSpeed(): THREE.Vector2 {
+    return this._mBarRingSpeed;
+  }
+
+  public set barRingSpeed(v: THREE.Vector2) {
+    this._mBarRingSpeed = v;
+  }
+
+  public get barRingAngle(): number {
+    return this._mBarRingAngle;
+  }
+
+  public set barRingAngle(v: number) {
+    this._mBarRingAngle = v;
+  }
+
+  public get triggerTimedEvent(): number {
+    const eventDuration = this._mTriggerTimedEvent;
+    this.triggerTimedEvent = 0.0;
+    return eventDuration;
+  }
+
+  public set triggerTimedEvent(v: number) {
+    this._mTriggerTimedEvent = v;
+  }
+
+  public setupPlaneMaterialFolder(): void {
+    const folderPlaneMaterial = this._gui.addFolder("Plane Material");
     const thisRef = this;
 
+    const [defaultMaterialName, defaultMaterial] = Array.from(
+      this._planeMaterials.entries()
+    )[0];
+
+    this.planeMaterial = defaultMaterial;
+
     const planeMaterialProps = {
+      material: defaultMaterialName,
       // Color controls
       get color() {
-        return thisRef.planeMaterial?.getColor().getHexString() || "";
+        return thisRef._mBaseColor.getHexString();
       },
       set color(hexString: string) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setColor(new Color(hexString));
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.color = hexString;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       get baseColor() {
-        return thisRef.planeMaterial?.getBaseColor().getHexString() || "";
+        return thisRef.baseColor.getHexString();
       },
       set baseColor(hexString: string) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setBaseColor(
-            new Color(hexString)
-          );
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.baseColor = hexString;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       get ringBarForegroundColor() {
-        return (
-          thisRef.planeMaterial?.getRingBarForegroundColor().getHexString() ||
-          ""
-        );
+        return thisRef.ringBarForegroundColor.getHexString();
       },
       set ringBarForegroundColor(hexString: string) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setRingBarForegroundColor(
-            new Color(hexString)
-          );
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.ringBarForegroundColor = hexString;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       get ringBarBackgroundColor() {
-        return (
-          thisRef.planeMaterial?.getRingBarBackgroundColor().getHexString() ||
-          ""
-        );
+        return thisRef.ringBarBackgroundColor.getHexString();
       },
       set ringBarBackgroundColor(hexString: string) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setRingBarBackgroundColor(
-            new Color(hexString)
-          );
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.ringBarBackgroundColor = hexString;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       // Numeric controls
-      get event() {
-        return thisRef.planeMaterial?.getEvent() || 1;
-      },
-      set event(value: number) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setEvent(value);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
-      },
-
       get ringBarOpacity() {
-        return thisRef.planeMaterial?.getRingBarOpacity() || 1.0;
+        return thisRef.ringBarOpacity;
       },
       set ringBarOpacity(value: number) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setRingBarOpacity(value);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.ringBarOpacity = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get event() {
+        return thisRef.event;
+      },
+      set event(value: number) {
+        thisRef.event = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       get eventIntensity() {
-        return thisRef.planeMaterial?.getEventIntensity() || 1.0;
+        return thisRef.eventIntensity;
       },
       set eventIntensity(value: number) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setEventIntensity(value);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.eventIntensity = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
-      get stripeCount() {
-        return thisRef.planeMaterial?.getStripeCount() || 40.0;
+      get barRingCount() {
+        return thisRef.barRingCount;
       },
-      set stripeCount(value: number) {
-        if (thisRef.planeMaterial) {
-          const changed = thisRef.planeMaterial.setStripeCount(value);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+      set barRingCount(value: number) {
+        thisRef.barRingCount = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       // Vector controls - represented as separate X and Y inputs
-      get speedX() {
-        return thisRef.planeMaterial?.getSpeed().x || -1.0;
+      get barRingSpeedX() {
+        return thisRef.barRingSpeed.x;
       },
-      set speedX(value: number) {
-        if (thisRef.planeMaterial) {
-          const currentSpeed = thisRef.planeMaterial.getSpeed();
-          const newSpeed = new Vector2(value, currentSpeed.y);
-          const changed = thisRef.planeMaterial.setSpeed(newSpeed);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+      set barRingSpeedX(value: number) {
+        thisRef.barRingSpeed.x = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
-      get speedY() {
-        return thisRef.planeMaterial?.getSpeed().y || 0.0;
+      get barRingSpeedY() {
+        return thisRef.barRingSpeed.y;
       },
-      set speedY(value: number) {
-        if (thisRef.planeMaterial) {
-          const currentSpeed = thisRef.planeMaterial.getSpeed();
-          const newSpeed = new Vector2(currentSpeed.x, value);
-          const changed = thisRef.planeMaterial.setSpeed(newSpeed);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+      set barRingSpeedY(value: number) {
+        thisRef.barRingSpeed.y = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       // Angle as multiples of PI
-      get anglePiFraction() {
-        const angle = thisRef.planeMaterial?.getAngle() || Math.PI;
-        return angle / Math.PI;
+      get barRingAngle() {
+        return thisRef.barRingAngle;
       },
-      set anglePiFraction(value: number) {
-        if (thisRef.planeMaterial) {
-          const actualAngle = value * Math.PI;
-          const changed = thisRef.planeMaterial.setAngle(actualAngle);
-          if (changed) thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+      set barRingAngle(value: number) {
+        thisRef.barRingAngle = value;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
 
       // Actions
       "Trigger Event": function () {
-        if (thisRef.planeMaterial) {
-          // Trigger the timed event that lasts for 2 seconds
-          thisRef.planeMaterial.triggerTimedEvent(2.0);
-          thisRef.planeControlsChanged = true;
-          thisRef.returnFocusToRenderer();
-        }
+        thisRef.triggerTimedEvent = 2.0;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
       },
     };
 
     // Add color controls with color pickers
+    folderPlaneMaterial
+      .add(
+        planeMaterialProps,
+        "material",
+        Array.from(this._planeMaterials.keys())
+      )
+      .name("Material")
+      .onChange((materialName) => {
+        console.log(materialName);
+        const material = this._planeMaterials.get(materialName);
+        if (material) {
+          console.log(material);
+          this.planeMaterial = material;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        }
+      });
     folderPlaneMaterial
       .addColor(planeMaterialProps, "color")
       .name("Main Color");
@@ -232,25 +308,35 @@ export class GUIManager {
     // Add numeric sliders
     folderPlaneMaterial
       .add(planeMaterialProps, "ringBarOpacity", 0, 1)
-      .name("Rings and Bars Opacity")
+      .name("Ring and Bar Opacity")
       .step(0.01);
+    folderPlaneMaterial
+      .add(planeMaterialProps, "event", 0, 1)
+      .name("Event")
+      .step(1.0);
     folderPlaneMaterial
       .add(planeMaterialProps, "eventIntensity", 0, 1)
       .name("Event Intensity")
       .step(0.01);
     folderPlaneMaterial
-      .add(planeMaterialProps, "stripeCount", 1, 100)
-      .name("Stripe Count")
+      .add(planeMaterialProps, "barRingCount", 1, 100)
+      .name("Bar/Ring Count")
       .step(1);
 
-    // Add vector controls
+    // // Add vector controls
     const speedFolder = folderPlaneMaterial.addFolder("Speed Vector");
-    speedFolder.add(planeMaterialProps, "speedX", -5, 5).name("X").step(0.01);
-    speedFolder.add(planeMaterialProps, "speedY", -5, 5).name("Y").step(0.01);
+    speedFolder
+      .add(planeMaterialProps, "barRingSpeedX", -5, 5)
+      .name("X")
+      .step(0.01);
+    speedFolder
+      .add(planeMaterialProps, "barRingSpeedY", -5, 5)
+      .name("Y")
+      .step(0.01);
 
     // Add angle control
     folderPlaneMaterial
-      .add(planeMaterialProps, "anglePiFraction", 0, 2)
+      .add(planeMaterialProps, "barRingAngle", 0, 2)
       .name("Angle (× π)")
       .step(0.125);
 
@@ -261,16 +347,51 @@ export class GUIManager {
     folderPlaneMaterial.open();
   }
 
+  public get planeMaterial(): PlaneMaterial | null {
+    return this._planeMaterial;
+  }
+
+  public set planeMaterial(material: PlaneMaterial | null) {
+    this._planeMaterial = material;
+
+    // Change parent plane material
+    this._parentRef.setPlaneMaterial(material);
+  }
+
+  public addPlaneMaterial(material: PlaneMaterial, name: string): void {
+    this._planeMaterials.set(name, material);
+  }
+
+  public listPlaneMaterials(): void {
+    console.log(Array.from(this._planeMaterials));
+  }
+
   private returnFocusToRenderer(): void {
     setTimeout(() => {
-      this.renderer.domElement.focus();
+      this._renderer.domElement.focus();
     }, 0);
+  }
+
+  public update(): void {
+    this.planeMaterial?.update({
+      color: this.color,
+      baseColor: this.baseColor,
+      ringBarForegroundColor: this.ringBarForegroundColor,
+      ringBarBackgroundColor: this.ringBarBackgroundColor,
+      ringBarOpacity: this.ringBarOpacity,
+      ringBarCount: this.barRingCount,
+      event: this.event,
+      eventIntensity: this.eventIntensity,
+      speed: this.barRingSpeed,
+      angle: this.barRingAngle * Math.PI,
+      triggerTimedEvent: this.triggerTimedEvent,
+    });
   }
 
   // Public methods for external control
   public dispose(): void {
-    if (this.gui) {
-      this.gui.destroy();
+    if (this._gui) {
+      this._gui.destroy();
     }
   }
 }

@@ -1,9 +1,4 @@
 import * as THREE from "three";
-import vertexShader from "../glsl/plane-shader/main.vert";
-// import fragmentShader from "../glsl/plane-shader/main.frag";
-// import fragmentShader from "../glsl/plane-shader/gaussian.frag";
-import fragmentShader from "../glsl/plane-shader/stripes.frag";
-// import fragmentShader from "../glsl/plane-shader/concentricCircles.frag";
 import { stripVersion } from "./MaterialUtils";
 
 export class PlaneMaterial extends THREE.RawShaderMaterial {
@@ -27,7 +22,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _eventIntensity: number = 1.0;
   private _eventProgress: number = 0.0;
 
-  constructor() {
+  constructor(vertexShader: string, fragmentShader: string) {
     super({
       uniforms: {
         uTime: { value: 1.0 },
@@ -39,7 +34,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
         uEvent: { value: 0 },
         uEventIntensity: { value: 1.0 },
         uEventProgress: { value: 0.0 },
-        uStripeCount: { value: 40.0 },
+        uRingBarCount: { value: 40.0 },
         uSpeed: { value: new THREE.Vector2(-1.0, 0.0) },
         uAngle: { value: Math.PI / 1.0 },
         uTexture: { value: null }, // This will hold our texture
@@ -167,7 +162,6 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     this._eventStartTime = this._clock.getElapsedTime();
     this._eventDuration = duration;
     this._eventActive = true;
-    this.setEvent(1); // Set to event 1
   }
 
   /**
@@ -192,7 +186,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   public setStripeCount(count: number): boolean {
     if (this._stripeCount !== count) {
       this._stripeCount = count;
-      this.uniforms.uStripeCount.value = this._stripeCount;
+      this.uniforms.uRingBarCount.value = this._stripeCount;
       return true;
     }
     return false;
@@ -239,9 +233,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     ringBarOpacity?: number;
     event?: number;
     eventIntensity?: number;
-    stripeCount?: number;
+    ringBarCount?: number;
     speed?: THREE.Vector2;
     angle?: number;
+    triggerTimedEvent?: number;
   }): { updatedUniforms: string[] } {
     const updatedUniforms: string[] = [];
 
@@ -262,9 +257,9 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
       if (this._eventProgress >= 1.0) {
         this._eventActive = false;
-        this.setEvent(0);
         this.uniforms.uEventProgress.value = 0.0;
         updatedUniforms.push("uEvent");
+        this._eventDuration = 0.0;
       }
     }
 
@@ -311,10 +306,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       }
 
       if (
-        params.stripeCount !== undefined &&
-        this.setStripeCount(params.stripeCount)
+        params.ringBarCount !== undefined &&
+        this.setStripeCount(params.ringBarCount)
       ) {
-        updatedUniforms.push("uStripeCount");
+        updatedUniforms.push("uRingBarCount");
       }
 
       if (params.speed && this.setSpeed(params.speed)) {
@@ -323,6 +318,13 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
       if (params.angle !== undefined && this.setAngle(params.angle)) {
         updatedUniforms.push("uAngle");
+      }
+
+      if (
+        params.triggerTimedEvent !== undefined &&
+        params.triggerTimedEvent > 0.0
+      ) {
+        this.triggerTimedEvent(params.triggerTimedEvent);
       }
     }
 

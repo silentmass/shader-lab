@@ -17,7 +17,7 @@ uniform float uRingBarOpacity;
 uniform int uEvent;
 uniform float uEventIntensity;
 uniform float uEventProgress;
-uniform float uStripeCount; // Number of stripes/rings
+uniform float uRingBarCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
 uniform sampler2D uTexture; // Declare the texture uniform
@@ -46,12 +46,12 @@ void main() {
     // uSpeed is in stripes per second, so we multiply by time directly
     vec2 offset = uSpeed * uTime;
 
-    vec2 localSpeed = 1.0 / uStripeCount * offset;
+    vec2 localSpeed = 1.0 / uRingBarCount * offset;
     
     // Apply pattern using the stripeCount to control frequency
     // and offset for movement at the defined speed
     float pattern = step(0.5, normalizedSin(initialPhase + 
-                                 (rotatedUv.x + localSpeed.x) * uStripeCount * 2.0 * PI));
+                                 (rotatedUv.x + localSpeed.x) * uRingBarCount * 2.0 * PI));
 
     vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uRingBarForegroundColor;
     vec3 ringsBackgroundColor = vec3(pattern) * uRingBarBackgroundColor;

@@ -6,12 +6,23 @@ import { TestMaterial } from "./materials/TestMaterial";
 import { TestMaterialFlash } from "./materials/TestMaterialFlash";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
 import { color } from "three/tsl";
-import { BackgroundPlane } from "./BackgroundPlane";
 import { GUIManager } from "./guimanager";
+
+import vertexShader from "./glsl/plane-shader/main.vert";
+// import fragmentShader from "../glsl/plane-shader/main.frag";
+// import fragmentShader from "../glsl/plane-shader/gaussian.frag";
+import stripesFragmentShader from "./glsl/plane-shader/stripes.frag";
+import circlesFragmentShader from "./glsl/plane-shader/concentricCircles.frag";
 
 interface CustomShaderMaterial extends THREE.RawShaderMaterial {
   update: (params?: any) => { updatedUniforms: string[] };
 }
+
+type Plane = THREE.Mesh<
+  THREE.BufferGeometry<THREE.NormalBufferAttributes>,
+  PlaneMaterial,
+  THREE.Object3DEventMap
+> | null;
 
 export class ShaderLab {
   private _renderer: THREE.WebGLRenderer;
@@ -19,10 +30,9 @@ export class ShaderLab {
   private _camera: THREE.PerspectiveCamera;
   private _statsManager: StatsManager;
   private _customMaterials: CustomShaderMaterial[] = []; // Array to track custom materials for updates
-  private _backgroundPlane: BackgroundPlane;
   private _guimanager: GUIManager;
-  private _planeMaterial: PlaneMaterial | null = null;
-  public isBackgroundPlaneBlack: boolean = false;
+  private _plane: Plane = null;
+  private _isBackgroundBlack: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     // Get WebGL2 context - THREE.js r163+ requires WebGL2
@@ -90,9 +100,7 @@ export class ShaderLab {
     this._scene.add(axesHelper);
 
     this._guimanager = new GUIManager(this, this._renderer);
-
-    this._backgroundPlane = new BackgroundPlane();
-    this._scene.add(this._backgroundPlane);
+    this._statsManager = new StatsManager();
 
     this.createPlane();
 
@@ -107,25 +115,48 @@ export class ShaderLab {
       this._renderer.setSize(width, height);
     });
 
-    this._statsManager = new StatsManager();
     this.animate();
+  }
+
+  public get plane(): Plane {
+    return this._plane;
+  }
+
+  public set plane(v: Plane) {
+    this._plane = v;
+  }
+
+  public getPlaneMaterial(): PlaneMaterial | null {
+    if (!this.plane) {
+      return null;
+    }
+    return this.plane.material;
+  }
+
+  public setPlaneMaterial(material: PlaneMaterial | null) {
+    if (this.plane && material) {
+      console.log("Changing plane material", material);
+      this.plane.material = material;
+    }
   }
 
   private createPlane() {
     const geometry = new THREE.PlaneGeometry(1, 1);
-    const material = new PlaneMaterial();
-    this._planeMaterial = material;
+    const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader);
+    const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
     // Register the material for updates
-    this._customMaterials.push(material);
-
-    // Add the material to GUI controls
-    this._guimanager.setPlaneMaterial(material);
+    this._customMaterials.push(stripes);
+    this._customMaterials.push(circles);
 
     // Create and add the plane to the scene
-    const plane = new THREE.Mesh(geometry, material);
-    plane.position.set(0, 0, 0);
-    this._scene.add(plane);
+    this.plane = new THREE.Mesh(geometry, stripes);
+    this.plane.position.set(0, 0, 0);
+    this._scene.add(this.plane);
+
+    this._guimanager.addPlaneMaterial(stripes, "stripes");
+    this._guimanager.addPlaneMaterial(circles, "circles");
+    this._guimanager.setupPlaneMaterialFolder();
   }
 
   private loadModelAndCreateClone() {
@@ -333,31 +364,19 @@ export class ShaderLab {
   }
 
   private animate() {
-    // Check for background plane state changes
-    if (
-      this.isBackgroundPlaneBlack !==
-      this._backgroundPlane.isBackgroundPlaneBlack
-    ) {
-      if (this.isBackgroundPlaneBlack) {
-        this._backgroundPlane.setBlack();
-      } else {
-        this._backgroundPlane.setWhite();
-      }
-    }
-
     // Check if GUI controls have been changed
-    const guiControlsChanged = this._guimanager.hasControlsChanged();
+    const guiControlsChanged = this._guimanager.planeControlsChanged;
 
     // If GUI controls have changed, we can log the changes or perform specific actions
     if (guiControlsChanged) {
       console.log("GUI controls for plane material have been updated");
       // You can add specific reactions to control changes here if needed
+      this._guimanager.update();
     }
 
     // Update all custom shader materials
     for (const material of this._customMaterials) {
       const updateResult = material.update();
-
       // We can check if any uniforms were updated during this frame
       if (updateResult.updatedUniforms.length > 0) {
         // Log or react to specific uniform updates if needed
@@ -372,8 +391,11 @@ export class ShaderLab {
     requestAnimationFrame(() => this.animate());
   }
 
-  // Method to get the current PlaneMaterial instance
-  public get shader(): PlaneMaterial | null {
-    return this._planeMaterial;
+  public get isBackgroundBlack(): boolean {
+    return this._isBackgroundBlack;
+  }
+
+  public set isBackgroundBlack(value: boolean) {
+    this._isBackgroundBlack = value;
   }
 }

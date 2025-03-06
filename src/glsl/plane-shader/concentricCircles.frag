@@ -17,7 +17,7 @@ uniform float uRingBarOpacity;
 uniform int uEvent;
 uniform float uEventIntensity;
 uniform float uEventProgress;
-uniform float uStripeCount; // Number of stripes/rings
+uniform float uRingBarCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
 uniform sampler2D uTexture; // Declare the texture uniform
@@ -40,7 +40,7 @@ void main() {
     // Time-based animation for expansion
     vec2 offset = 4.0 * -1.0 * uSpeed * uTime;
 
-    float pattern = normalizedSin(offset.x + radius * uStripeCount * 2.0 * PI);
+    float pattern = normalizedSin(offset.x + radius * uRingBarCount * 2.0 * PI);
     
     // Create sharper rings with step function
     float rings = step(0.5, pattern);
