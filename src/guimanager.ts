@@ -12,6 +12,9 @@ export class GUIManager {
   private _planeControlsChanged: boolean = false;
   private _planeMaterials: Map<string, PlaneMaterial> = new Map();
 
+  // Background settings
+  private _mBackgroundColor: THREE.Color = new THREE.Color("#000000");
+
   // Material settings
   private _mColor: THREE.Color = new THREE.Color("pink");
   private _mBaseColor: THREE.Color = new THREE.Color("gray");
@@ -38,17 +41,51 @@ export class GUIManager {
     const thisRef = this; // Reference to the GUIManager instance
 
     const propsBackgroundPlane = {
-      get Black() {
-        return thisRef._parentRef.isBackgroundBlack;
+      get backgroundColor() {
+        return "#" + thisRef._mBackgroundColor.getHexString();
       },
-      set Black(v: boolean) {
-        thisRef._parentRef.isBackgroundBlack = v;
+      set backgroundColor(hexString: string) {
+        thisRef._mBackgroundColor = new THREE.Color(hexString);
+        // Update the parent's backgroundColor if available
+        if (thisRef._parentRef.backgroundColor) {
+          thisRef._parentRef.backgroundColor =
+            thisRef._mBackgroundColor.clone();
+        }
         thisRef.returnFocusToRenderer();
+        thisRef.updateBackgrounds();
       },
       Mode: "Shader", // Default value
     };
 
-    folderBackgroundPlane.add(propsBackgroundPlane, "Black");
+    folderBackgroundPlane
+      .addColor(propsBackgroundPlane, "backgroundColor")
+      .name("Background Color");
+
+    // Initialize the background color
+    this.updateBackgrounds();
+  }
+
+  private updateBackgrounds(): void {
+    // Update both the document body background and the THREE.js scene background
+    const colorHex = "#" + this._mBackgroundColor.getHexString();
+
+    // Update body background
+    document.body.style.backgroundColor = colorHex;
+
+    // Update THREE.js scene background if parent reference has access to the scene
+    if (this._parentRef && this._parentRef._scene) {
+      // Set the scene background color
+      this._parentRef._scene.background = this._mBackgroundColor.clone();
+    }
+  }
+
+  public get backgroundColor(): THREE.Color {
+    return this._mBackgroundColor;
+  }
+
+  public set backgroundColor(v: string) {
+    this._mBackgroundColor = new THREE.Color(v);
+    this.updateBackgrounds();
   }
 
   public get planeControlsChanged() {

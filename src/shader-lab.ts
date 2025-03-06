@@ -25,14 +25,15 @@ type Plane = THREE.Mesh<
 > | null;
 
 export class ShaderLab {
+  // Make scene accessible to GUIManager
+  public _scene: THREE.Scene;
   private _renderer: THREE.WebGLRenderer;
-  private _scene: THREE.Scene;
   private _camera: THREE.PerspectiveCamera;
   private _statsManager: StatsManager;
   private _customMaterials: CustomShaderMaterial[] = []; // Array to track custom materials for updates
   private _guimanager: GUIManager;
   private _plane: Plane = null;
-  private _isBackgroundBlack: boolean = false;
+  private _backgroundColor: THREE.Color = new THREE.Color(0x000000);
 
   constructor(canvas: HTMLCanvasElement) {
     // Get WebGL2 context - THREE.js r163+ requires WebGL2
@@ -138,6 +139,12 @@ export class ShaderLab {
       console.log("Changing plane material", material);
       this.plane.material = material;
     }
+  }
+
+  // Method to update scene background color
+  public updateSceneBackground(color: THREE.Color): void {
+    this._backgroundColor = color;
+    this._scene.background = this._backgroundColor;
   }
 
   private createPlane() {
@@ -391,11 +398,11 @@ export class ShaderLab {
     requestAnimationFrame(() => this.animate());
   }
 
-  public get isBackgroundBlack(): boolean {
-    return this._isBackgroundBlack;
+  public get backgroundColor(): THREE.Color {
+    return this._backgroundColor;
   }
 
-  public set isBackgroundBlack(value: boolean) {
-    this._isBackgroundBlack = value;
+  public set backgroundColor(color: THREE.Color) {
+    this._backgroundColor = color;
   }
 }
