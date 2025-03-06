@@ -3,6 +3,20 @@ import { WebGLRenderer, Color, Vector2 } from "three";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
+const DEFAULT_MATERIAL_SETTINGS = {
+  color: new THREE.Color("pink"),
+  baseColor: new THREE.Color("gray"),
+  barRingForegroundColor: new THREE.Color("black"),
+  barRingBackgroundColor: new THREE.Color("yellow"),
+  barRingOpacity: 1.0,
+  event: 1,
+  eventIntensity: 1.0,
+  barRingCount: 10,
+  barRingSpeed: new THREE.Vector2(1.0, 0.0),
+  barRingAngle: 0.0,
+  triggerTimedEvent: 0.0,
+};
+
 export class GUIManager {
   private _gui: GUI;
   private _parentRef: any; // Replace with your actual parent class type
@@ -16,22 +30,28 @@ export class GUIManager {
   private _mBackgroundColor: THREE.Color = new THREE.Color("#000000");
 
   // Material settings
-  private _mColor: THREE.Color = new THREE.Color("pink");
-  private _mBaseColor: THREE.Color = new THREE.Color("gray");
-  private _mRingBarForegroundColor: THREE.Color = new THREE.Color("black");
-  private _mRingBarBackgroundColor: THREE.Color = new THREE.Color("white");
-  private _mRingBarOpacity: number = 1.0;
-  private _mEvent: number = 0;
-  private _mEventIntensity: number = 1.0;
-  private _mBarRingCount: number = 10;
-  private _mBarRingSpeed: THREE.Vector2 = new THREE.Vector2(1.0, 0.0);
-  private _mBarRingAngle: number = 0.0;
-  private _mTriggerTimedEvent: number = 0.0;
+  private _mColor: THREE.Color = DEFAULT_MATERIAL_SETTINGS.color.clone();
+  private _mBaseColor: THREE.Color =
+    DEFAULT_MATERIAL_SETTINGS.baseColor.clone();
+  private _mBarRingForegroundColor: THREE.Color =
+    DEFAULT_MATERIAL_SETTINGS.barRingForegroundColor.clone();
+  private _mBarRingBackgroundColor: THREE.Color =
+    DEFAULT_MATERIAL_SETTINGS.barRingBackgroundColor.clone();
+  private _mBarRingOpacity: number = DEFAULT_MATERIAL_SETTINGS.barRingOpacity;
+  private _mEvent: number = DEFAULT_MATERIAL_SETTINGS.event;
+  private _mEventIntensity: number = DEFAULT_MATERIAL_SETTINGS.eventIntensity;
+  private _mBarRingCount: number = DEFAULT_MATERIAL_SETTINGS.barRingCount;
+  private _mBarRingSpeed: THREE.Vector2 =
+    DEFAULT_MATERIAL_SETTINGS.barRingSpeed.clone();
+  private _mBarRingAngle: number = DEFAULT_MATERIAL_SETTINGS.barRingAngle;
+  private _mTriggerTimedEvent: number =
+    DEFAULT_MATERIAL_SETTINGS.triggerTimedEvent;
 
   constructor(parentRef: any, renderer: WebGLRenderer) {
     this._gui = new GUI();
     this._parentRef = parentRef;
     this._renderer = renderer;
+    this.planeControlsChanged = true;
 
     this.setupBackgroundFolder();
   }
@@ -114,28 +134,28 @@ export class GUIManager {
     this._mBaseColor = new THREE.Color(v);
   }
 
-  public get ringBarForegroundColor(): THREE.Color {
-    return this._mRingBarForegroundColor;
+  public get barRingForegroundColor(): THREE.Color {
+    return this._mBarRingForegroundColor;
   }
 
-  public set ringBarForegroundColor(v: string) {
-    this._mRingBarForegroundColor = new THREE.Color(v);
+  public set barRingForegroundColor(v: string) {
+    this._mBarRingForegroundColor = new THREE.Color(v);
   }
 
-  public get ringBarBackgroundColor(): THREE.Color {
-    return this._mRingBarBackgroundColor;
+  public get barRingBackgroundColor(): THREE.Color {
+    return this._mBarRingBackgroundColor;
   }
 
-  public set ringBarBackgroundColor(v: string) {
-    this._mRingBarBackgroundColor = new THREE.Color(v);
+  public set barRingBackgroundColor(v: string) {
+    this._mBarRingBackgroundColor = new THREE.Color(v);
   }
 
-  public get ringBarOpacity(): number {
-    return this._mRingBarOpacity;
+  public get barRingOpacity(): number {
+    return this._mBarRingOpacity;
   }
 
-  public set ringBarOpacity(v: number) {
-    this._mRingBarOpacity = v;
+  public set barRingOpacity(v: number) {
+    this._mBarRingOpacity = v;
   }
 
   public get event(): number {
@@ -219,30 +239,30 @@ export class GUIManager {
         thisRef.returnFocusToRenderer();
       },
 
-      get ringBarForegroundColor() {
-        return thisRef.ringBarForegroundColor.getHexString();
+      get barRingForegroundColor() {
+        return thisRef.barRingForegroundColor.getHexString();
       },
-      set ringBarForegroundColor(hexString: string) {
-        thisRef.ringBarForegroundColor = hexString;
+      set barRingForegroundColor(hexString: string) {
+        thisRef.barRingForegroundColor = hexString;
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
 
-      get ringBarBackgroundColor() {
-        return thisRef.ringBarBackgroundColor.getHexString();
+      get barRingBackgroundColor() {
+        return thisRef.barRingBackgroundColor.getHexString();
       },
-      set ringBarBackgroundColor(hexString: string) {
-        thisRef.ringBarBackgroundColor = hexString;
+      set barRingBackgroundColor(hexString: string) {
+        thisRef.barRingBackgroundColor = hexString;
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
 
       // Numeric controls
-      get ringBarOpacity() {
-        return thisRef.ringBarOpacity;
+      get barRingOpacity() {
+        return thisRef.barRingOpacity;
       },
-      set ringBarOpacity(value: number) {
-        thisRef.ringBarOpacity = value;
+      set barRingOpacity(value: number) {
+        thisRef.barRingOpacity = value;
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
@@ -336,15 +356,15 @@ export class GUIManager {
       .addColor(planeMaterialProps, "baseColor")
       .name("Base Color");
     folderPlaneMaterial
-      .addColor(planeMaterialProps, "ringBarForegroundColor")
+      .addColor(planeMaterialProps, "barRingForegroundColor")
       .name("Ring Foreground");
     folderPlaneMaterial
-      .addColor(planeMaterialProps, "ringBarBackgroundColor")
+      .addColor(planeMaterialProps, "barRingBackgroundColor")
       .name("Ring Background");
 
     // Add numeric sliders
     folderPlaneMaterial
-      .add(planeMaterialProps, "ringBarOpacity", 0, 1)
+      .add(planeMaterialProps, "barRingOpacity", 0.0, 1.0)
       .name("Ring and Bar Opacity")
       .step(0.01);
     folderPlaneMaterial
@@ -413,10 +433,10 @@ export class GUIManager {
     this.planeMaterial?.update({
       color: this.color,
       baseColor: this.baseColor,
-      ringBarForegroundColor: this.ringBarForegroundColor,
-      ringBarBackgroundColor: this.ringBarBackgroundColor,
-      ringBarOpacity: this.ringBarOpacity,
-      ringBarCount: this.barRingCount,
+      barRingForegroundColor: this.barRingForegroundColor,
+      barRingBackgroundColor: this.barRingBackgroundColor,
+      barRingOpacity: this.barRingOpacity,
+      barRingCount: this.barRingCount,
       event: this.event,
       eventIntensity: this.eventIntensity,
       speed: this.barRingSpeed,

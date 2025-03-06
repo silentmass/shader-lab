@@ -11,13 +11,13 @@ in vec3 vPosition;
 // Uniforms for appearance customization
 uniform float uTime;
 uniform vec3 uBaseColor;
-uniform vec3 uRingBarForegroundColor;
-uniform vec3 uRingBarBackgroundColor;
-uniform float uRingBarOpacity;
+uniform vec3 uBarRingForegroundColor;
+uniform vec3 uBarRingBackgroundColor;
+uniform float uBarRingOpacity;
 uniform int uEvent;
 uniform float uEventIntensity;
 uniform float uEventProgress;
-uniform float uRingBarCount; // Number of stripes/rings
+uniform float uBarRingCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
 uniform sampler2D uTexture; // Declare the texture uniform
@@ -46,22 +46,25 @@ void main() {
     // uSpeed is in stripes per second, so we multiply by time directly
     vec2 offset = uSpeed * uTime;
 
-    vec2 localSpeed = 1.0 / uRingBarCount * offset;
+    vec2 localSpeed = 1.0 / uBarRingCount * offset;
     
     // Apply pattern using the stripeCount to control frequency
     // and offset for movement at the defined speed
     float pattern = step(0.5, normalizedSin(initialPhase + 
-                                 (rotatedUv.x + localSpeed.x) * uRingBarCount * 2.0 * PI));
+                                 (rotatedUv.x + localSpeed.x) * uBarRingCount * 2.0 * PI));
 
-    vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uRingBarForegroundColor;
-    vec3 ringsBackgroundColor = vec3(pattern) * uRingBarBackgroundColor;
+    vec3 barForegroundColor = vec3((1.0 - pattern)) * uBarRingForegroundColor;
+    vec3 barBackgroundColor = vec3(pattern) * uBarRingBackgroundColor;
 
 
-    vec3 finalColor = mix(uBaseColor,  (ringsForegroundColor+ringsBackgroundColor), uRingBarOpacity);
+    vec3 finalColor = mix(uBaseColor,  (barForegroundColor+barBackgroundColor), uBarRingOpacity);
     
     if (uEvent == 1) {
-        vec3 textPlane = mix(uBaseColor, cBlack, texColor.x);
+        // Keep text black and change texture white to base color
+        vec3 textPlane = mix(cBlack, uBaseColor, texColor.x);
+        // Apply event intensity
         textPlane = mix(uBaseColor, textPlane, uEventIntensity);
+        // Apply progress, where uEventProgress is 1.0 - progress
         fragColor = vec4(mix(finalColor,textPlane,  uEventProgress), 1.0);
     } else {
         fragColor = vec4(finalColor, 1.0);

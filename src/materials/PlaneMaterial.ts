@@ -1,71 +1,196 @@
 import * as THREE from "three";
 import { stripVersion } from "./MaterialUtils";
 
+// Define default values at the module level
+const DEFAULT_UNIFORMS = {
+  time: 1.0,
+  color: new THREE.Color(0x00cccc),
+  baseColor: new THREE.Color("grey"),
+  barRingForegroundColor: new THREE.Color("blue"),
+  barRingBackgroundColor: new THREE.Color("red"),
+  barRingOpacity: 1.0,
+  event: 0,
+  eventIntensity: 1.0,
+  eventProgress: 0.0,
+  barRingCount: 40.0,
+  speed: new THREE.Vector2(-1.0, 0.0),
+  angle: Math.PI / 1.0,
+  texture: null as THREE.Texture | null,
+};
+
+interface Uniforms {
+  uTime?: number;
+  uColor?: THREE.Color;
+  uBaseColor?: THREE.Color;
+  uBarRingForegroundColor?: THREE.Color;
+  uBarRingBackgroundColor?: THREE.Color;
+  uBarRingOpacity?: number;
+  uEvent?: number;
+  uEventIntensity?: number;
+  uEventProgress?: number;
+  uBarRingCount?: number;
+  uSpeed?: THREE.Vector2;
+  uAngle?: number;
+  uTexture?: THREE.Texture | null;
+}
+
+interface PlaneOptions {
+  uniforms?: Uniforms;
+}
+
 export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _clock: THREE.Clock;
-  private _time: number = 1.0;
-  private _color: THREE.Color = new THREE.Color(0x00cccc);
-  private _baseColor: THREE.Color = new THREE.Color("grey");
-  private _ringBarForegroundColor: THREE.Color = new THREE.Color("blue");
-  private _ringBarBackgroundColor: THREE.Color = new THREE.Color("red");
-  private _ringBarOpacity: number = 1.0;
-  private _stripeCount: number = 40.0;
-  private _speed: THREE.Vector2 = new THREE.Vector2(-1.0, 0.0);
-  private _angle: number = Math.PI / 1.0;
-  private _texture: THREE.Texture | null = null;
+  private _time: number = DEFAULT_UNIFORMS.time;
+  private _color: THREE.Color = DEFAULT_UNIFORMS.color.clone();
+  private _baseColor: THREE.Color = DEFAULT_UNIFORMS.baseColor.clone();
+  private _barRingForegroundColor: THREE.Color =
+    DEFAULT_UNIFORMS.barRingForegroundColor.clone();
+  private _barRingBackgroundColor: THREE.Color =
+    DEFAULT_UNIFORMS.barRingBackgroundColor.clone();
+  private _barRingOpacity: number = DEFAULT_UNIFORMS.barRingOpacity;
+  private _barRingCount: number = DEFAULT_UNIFORMS.barRingCount;
+  private _speed: THREE.Vector2 = DEFAULT_UNIFORMS.speed.clone();
+  private _angle: number = DEFAULT_UNIFORMS.angle;
+  private _texture: THREE.Texture | null = DEFAULT_UNIFORMS.texture;
 
   // For timed events
   private _eventStartTime: number = 0;
   private _eventDuration: number = 0;
   private _eventActive: boolean = false;
-  private _event: number = 0;
-  private _eventIntensity: number = 1.0;
-  private _eventProgress: number = 0.0;
+  private _event: number = DEFAULT_UNIFORMS.event;
+  private _eventIntensity: number = DEFAULT_UNIFORMS.eventIntensity;
+  private _eventProgress: number = DEFAULT_UNIFORMS.eventProgress;
 
-  constructor(vertexShader: string, fragmentShader: string) {
-    super({
-      uniforms: {
-        uTime: { value: 1.0 },
-        uColor: { value: new THREE.Color(0x00cccc) },
-        uBaseColor: { value: new THREE.Color("grey") },
-        uRingBarForegroundColor: { value: new THREE.Color("blue") },
-        uRingBarBackgroundColor: { value: new THREE.Color("red") },
-        uRingBarOpacity: { value: 1.0 },
-        uEvent: { value: 0 },
-        uEventIntensity: { value: 1.0 },
-        uEventProgress: { value: 0.0 },
-        uRingBarCount: { value: 40.0 },
-        uSpeed: { value: new THREE.Vector2(-1.0, 0.0) },
-        uAngle: { value: Math.PI / 1.0 },
-        uTexture: { value: null }, // This will hold our texture
+  constructor(
+    vertexShader: string,
+    fragmentShader: string,
+    options?: PlaneOptions
+  ) {
+    // Initialize all uniform values, using defaults when needed
+    const uniforms = {
+      uTime: { value: options?.uniforms?.uTime ?? DEFAULT_UNIFORMS.time },
+      uColor: {
+        value:
+          options?.uniforms?.uColor?.clone() ?? DEFAULT_UNIFORMS.color.clone(),
       },
+      uBaseColor: {
+        value:
+          options?.uniforms?.uBaseColor?.clone() ??
+          DEFAULT_UNIFORMS.baseColor.clone(),
+      },
+      uBarRingForegroundColor: {
+        value:
+          options?.uniforms?.uBarRingForegroundColor?.clone() ??
+          DEFAULT_UNIFORMS.barRingForegroundColor.clone(),
+      },
+      uBarRingBackgroundColor: {
+        value:
+          options?.uniforms?.uBarRingBackgroundColor?.clone() ??
+          DEFAULT_UNIFORMS.barRingBackgroundColor.clone(),
+      },
+      uBarRingOpacity: {
+        value:
+          options?.uniforms?.uBarRingOpacity ?? DEFAULT_UNIFORMS.barRingOpacity,
+      },
+      uEvent: { value: options?.uniforms?.uEvent ?? DEFAULT_UNIFORMS.event },
+      uEventIntensity: {
+        value:
+          options?.uniforms?.uEventIntensity ?? DEFAULT_UNIFORMS.eventIntensity,
+      },
+      uEventProgress: {
+        value:
+          options?.uniforms?.uEventProgress ?? DEFAULT_UNIFORMS.eventProgress,
+      },
+      uBarRingCount: {
+        value:
+          options?.uniforms?.uBarRingCount ?? DEFAULT_UNIFORMS.barRingCount,
+      },
+      uSpeed: {
+        value:
+          options?.uniforms?.uSpeed?.clone() ?? DEFAULT_UNIFORMS.speed.clone(),
+      },
+      uAngle: { value: options?.uniforms?.uAngle ?? DEFAULT_UNIFORMS.angle },
+      uTexture: {
+        value: options?.uniforms?.uTexture ?? DEFAULT_UNIFORMS.texture,
+      },
+    };
+
+    // Call super with prepared uniforms
+    super({
+      uniforms,
       vertexShader: stripVersion(vertexShader),
       fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3,
       side: THREE.DoubleSide,
       transparent: true,
     });
+
+    // Initialize private variables to match uniforms
+    this._color = uniforms.uColor.value.clone();
+    this._baseColor = uniforms.uBaseColor.value.clone();
+    this._barRingForegroundColor =
+      uniforms.uBarRingForegroundColor.value.clone();
+    this._barRingBackgroundColor =
+      uniforms.uBarRingBackgroundColor.value.clone();
+    this._barRingOpacity = uniforms.uBarRingOpacity.value;
+    this._event = uniforms.uEvent.value;
+    this._eventIntensity = uniforms.uEventIntensity.value;
+    this._barRingCount = uniforms.uBarRingCount.value;
+    this._speed = uniforms.uSpeed.value.clone();
+    this._angle = uniforms.uAngle.value;
+    this._texture = uniforms.uTexture.value;
+
     this._clock = new THREE.Clock();
     this._clock.start();
 
     // Load the texture
+    this.loadTexture();
+  }
+
+  /**
+   * Loads the texture and updates the uniform
+   */
+  private loadTexture(): void {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load(
       "/assets/images/stimulus.png",
       (loadedTexture) => {
-        // Configure texture properties if needed
+        // Configure texture properties
         loadedTexture.wrapS = THREE.RepeatWrapping;
         loadedTexture.wrapT = THREE.RepeatWrapping;
 
-        // Store the texture as a private variable
+        // Store the texture and update uniform
         this._texture = loadedTexture;
-
-        // Update the uniform
         this.uniforms.uTexture.value = this._texture;
       },
       () => console.log("Loading shader texture..."),
       (error) => console.warn("Error loading shader texture", error)
     );
+  }
+
+  /**
+   * Resets all uniforms to their default values
+   */
+  public resetToDefaults(): void {
+    this.setColor(DEFAULT_UNIFORMS.color.clone());
+    this.setBaseColor(DEFAULT_UNIFORMS.baseColor.clone());
+    this.setBarRingForegroundColor(
+      DEFAULT_UNIFORMS.barRingForegroundColor.clone()
+    );
+    this.setBarRingBackgroundColor(
+      DEFAULT_UNIFORMS.barRingBackgroundColor.clone()
+    );
+    this.setBarRingOpacity(DEFAULT_UNIFORMS.barRingOpacity);
+    this.setEvent(DEFAULT_UNIFORMS.event);
+    this.setEventIntensity(DEFAULT_UNIFORMS.eventIntensity);
+    this.setStripeCount(DEFAULT_UNIFORMS.barRingCount);
+    this.setSpeed(DEFAULT_UNIFORMS.speed.clone());
+    this.setAngle(DEFAULT_UNIFORMS.angle);
+
+    // Reset event state
+    this._eventActive = false;
+    this._eventProgress = 0;
+    this.uniforms.uEventProgress.value = 0;
   }
 
   /**
@@ -101,11 +226,11 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
    * @param color The new foreground color value
    * @returns Boolean indicating whether the uniform was updated
    */
-  public setRingBarForegroundColor(color: THREE.Color): boolean {
-    if (!this._ringBarForegroundColor.equals(color)) {
-      this._ringBarForegroundColor = color.clone();
-      this.uniforms.uRingBarForegroundColor.value =
-        this._ringBarForegroundColor;
+  public setBarRingForegroundColor(color: THREE.Color): boolean {
+    if (!this._barRingForegroundColor.equals(color)) {
+      this._barRingForegroundColor = color.clone();
+      this.uniforms.uBarRingForegroundColor.value =
+        this._barRingForegroundColor;
       return true;
     }
     return false;
@@ -116,11 +241,11 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
    * @param color The new background color value
    * @returns Boolean indicating whether the uniform was updated
    */
-  public setRingBarBackgroundColor(color: THREE.Color): boolean {
-    if (!this._ringBarBackgroundColor.equals(color)) {
-      this._ringBarBackgroundColor = color.clone();
-      this.uniforms.uRingBarBackgroundColor.value =
-        this._ringBarBackgroundColor;
+  public setBarRingBackgroundColor(color: THREE.Color): boolean {
+    if (!this._barRingBackgroundColor.equals(color)) {
+      this._barRingBackgroundColor = color.clone();
+      this.uniforms.uBarRingBackgroundColor.value =
+        this._barRingBackgroundColor;
       return true;
     }
     return false;
@@ -131,10 +256,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
    * @param intensity The new intensity value
    * @returns Boolean indicating whether the uniform was updated
    */
-  public setRingBarOpacity(opacity: number): boolean {
-    if (this._ringBarOpacity !== opacity) {
-      this._ringBarOpacity = opacity;
-      this.uniforms.uRingBarOpacity.value = this._ringBarOpacity;
+  public setBarRingOpacity(opacity: number): boolean {
+    if (this._barRingOpacity !== opacity) {
+      this._barRingOpacity = opacity;
+      this.uniforms.uBarRingOpacity.value = this._barRingOpacity;
       return true;
     }
     return false;
@@ -184,9 +309,9 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
    * @returns Boolean indicating whether the uniform was updated
    */
   public setStripeCount(count: number): boolean {
-    if (this._stripeCount !== count) {
-      this._stripeCount = count;
-      this.uniforms.uRingBarCount.value = this._stripeCount;
+    if (this._barRingCount !== count) {
+      this._barRingCount = count;
+      this.uniforms.uBarRingCount.value = this._barRingCount;
       return true;
     }
     return false;
@@ -228,12 +353,12 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   public update(params?: {
     color?: THREE.Color;
     baseColor?: THREE.Color;
-    ringBarForegroundColor?: THREE.Color;
-    ringBarBackgroundColor?: THREE.Color;
-    ringBarOpacity?: number;
+    barRingForegroundColor?: THREE.Color;
+    barRingBackgroundColor?: THREE.Color;
+    barRingOpacity?: number;
     event?: number;
     eventIntensity?: number;
-    ringBarCount?: number;
+    barRingCount?: number;
     speed?: THREE.Vector2;
     angle?: number;
     triggerTimedEvent?: number;
@@ -274,24 +399,24 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       }
 
       if (
-        params.ringBarForegroundColor &&
-        this.setRingBarForegroundColor(params.ringBarForegroundColor)
+        params.barRingForegroundColor &&
+        this.setBarRingForegroundColor(params.barRingForegroundColor)
       ) {
-        updatedUniforms.push("uRingBarForegroundColor");
+        updatedUniforms.push("uBarRingForegroundColor");
       }
 
       if (
-        params.ringBarBackgroundColor &&
-        this.setRingBarBackgroundColor(params.ringBarBackgroundColor)
+        params.barRingBackgroundColor &&
+        this.setBarRingBackgroundColor(params.barRingBackgroundColor)
       ) {
-        updatedUniforms.push("uRingBarBackgroundColor");
+        updatedUniforms.push("uBarRingBackgroundColor");
       }
 
       if (
-        params.ringBarOpacity &&
-        this.setRingBarOpacity(params.ringBarOpacity)
+        params.barRingOpacity !== undefined &&
+        this.setBarRingOpacity(params.barRingOpacity)
       ) {
-        updatedUniforms.push("uRingBarOpacity");
+        updatedUniforms.push("uBarRingOpacity");
       }
 
       if (params.event !== undefined && this.setEvent(params.event)) {
@@ -306,10 +431,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       }
 
       if (
-        params.ringBarCount !== undefined &&
-        this.setStripeCount(params.ringBarCount)
+        params.barRingCount !== undefined &&
+        this.setStripeCount(params.barRingCount)
       ) {
-        updatedUniforms.push("uRingBarCount");
+        updatedUniforms.push("uBarRingCount");
       }
 
       if (params.speed && this.setSpeed(params.speed)) {
@@ -340,16 +465,16 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     return this._baseColor.clone();
   }
 
-  public getRingBarForegroundColor(): THREE.Color {
-    return this._ringBarForegroundColor.clone();
+  public getBarRingForegroundColor(): THREE.Color {
+    return this._barRingForegroundColor.clone();
   }
 
-  public getRingBarBackgroundColor(): THREE.Color {
-    return this._ringBarBackgroundColor.clone();
+  public getBarRingBackgroundColor(): THREE.Color {
+    return this._barRingBackgroundColor.clone();
   }
 
-  public getRingBarOpacity(): number {
-    return this._ringBarOpacity;
+  public getBarRingOpacity(): number {
+    return this._barRingOpacity;
   }
 
   public getEvent(): number {
@@ -360,8 +485,8 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     return this._eventIntensity;
   }
 
-  public getStripeCount(): number {
-    return this._stripeCount;
+  public getBarRingCount(): number {
+    return this._barRingCount;
   }
 
   public getSpeed(): THREE.Vector2 {

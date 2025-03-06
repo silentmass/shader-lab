@@ -149,7 +149,12 @@ export class ShaderLab {
 
   private createPlane() {
     const geometry = new THREE.PlaneGeometry(1, 1);
-    const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader);
+    const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader, {
+      uniforms: {
+        uBarRingForegroundColor: new THREE.Color("black"),
+        uBarRingBackgroundColor: new THREE.Color("white"),
+      },
+    });
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
     // Register the material for updates
