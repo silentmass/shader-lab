@@ -13,9 +13,10 @@ const DEFAULT_UNIFORMS = {
   eventIntensity: 1.0,
   eventProgress: 0.0,
   barRingCount: 40.0,
-  speed: new THREE.Vector2(-1.0, 0.0),
+  speed: new THREE.Vector2(1.0, 0.0),
   angle: Math.PI / 1.0,
   texture: null as THREE.Texture | null,
+  geometryCenter: new THREE.Vector3(0, 0, 0),
 };
 
 interface Uniforms {
@@ -32,6 +33,7 @@ interface Uniforms {
   uSpeed?: THREE.Vector2;
   uAngle?: number;
   uTexture?: THREE.Texture | null;
+  uGeometryCenter?: THREE.Vector3;
 }
 
 interface PlaneOptions {
@@ -52,6 +54,8 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _speed: THREE.Vector2 = DEFAULT_UNIFORMS.speed.clone();
   private _angle: number = DEFAULT_UNIFORMS.angle;
   private _texture: THREE.Texture | null = DEFAULT_UNIFORMS.texture;
+  private _geometryCenter: THREE.Vector3 =
+    DEFAULT_UNIFORMS.geometryCenter.clone();
 
   // For timed events
   private _eventStartTime: number = 0;
@@ -113,6 +117,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       uTexture: {
         value: options?.uniforms?.uTexture ?? DEFAULT_UNIFORMS.texture,
       },
+      uGeometryCenter: {
+        value:
+          options?.uniforms?.uGeometryCenter ?? DEFAULT_UNIFORMS.geometryCenter,
+      },
     };
 
     // Call super with prepared uniforms
@@ -139,6 +147,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     this._speed = uniforms.uSpeed.value.clone();
     this._angle = uniforms.uAngle.value;
     this._texture = uniforms.uTexture.value;
+    this._geometryCenter = uniforms.uGeometryCenter.value.clone();
 
     this._clock = new THREE.Clock();
     this._clock.start();
@@ -346,6 +355,20 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   }
 
   /**
+   * Sets the geometry center uniform only if the value has changed
+   * @param geometryCenter The new angle value
+   * @returns Boolean indicating whether the uniform was updated
+   */
+  public setGeometryCenter(geometryCenter: THREE.Vector3): boolean {
+    if (this._geometryCenter !== geometryCenter) {
+      this._geometryCenter = geometryCenter;
+      this.uniforms.uGeometryCenter.value = this._geometryCenter;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Updates the material uniforms
    * @param params Optional parameters to update various uniforms
    * @returns Object containing information about which uniforms were updated
@@ -362,6 +385,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     speed?: THREE.Vector2;
     angle?: number;
     triggerTimedEvent?: number;
+    geometryCenter?: THREE.Vector3;
   }): { updatedUniforms: string[] } {
     const updatedUniforms: string[] = [];
 
@@ -446,6 +470,13 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       }
 
       if (
+        params.geometryCenter &&
+        this.setGeometryCenter(params.geometryCenter)
+      ) {
+        updatedUniforms.push("uGeometryCenter");
+      }
+
+      if (
         params.triggerTimedEvent !== undefined &&
         params.triggerTimedEvent > 0.0
       ) {
@@ -495,5 +526,9 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
   public getAngle(): number {
     return this._angle;
+  }
+
+  public getGeometryCenter(): THREE.Vector3 {
+    return this._geometryCenter;
   }
 }

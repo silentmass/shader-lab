@@ -7,6 +7,7 @@ precision highp float;
 in vec2 vUv;
 in vec3 vNormal;
 in vec3 vPosition;
+in float vDistanceToCenter;
 
 // Uniforms for appearance customization
 uniform float uTime;

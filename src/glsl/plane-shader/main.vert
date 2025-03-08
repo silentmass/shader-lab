@@ -10,11 +10,13 @@ uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform float uTime;
+uniform vec3 uGeometryCenter;
 
 // Outputs to fragment shader
 out vec2 vUv;
 out vec3 vNormal;
 out vec3 vPosition;
+out float vDistanceToCenter; // New output for distance to center
 
 void main() {
     // Pass UV coordinates to fragment shader
@@ -25,6 +27,11 @@ void main() {
     
     // Calculate world position for lighting
     vPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
+
+    // Calculate distance to center in model space
+    // For most Three.js geometries, (0,0,0) is the center
+    float distanceToCenter = length(position);
+    vDistanceToCenter = distanceToCenter;
     
     // Standard transformation from local to clip space
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(pos, 1.0);

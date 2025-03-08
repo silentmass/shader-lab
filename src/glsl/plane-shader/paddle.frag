@@ -22,6 +22,7 @@ uniform float uBarRingCount; // Number of stripes/rings
 uniform vec2 uSpeed; // Speed of expansion (positive) or contraction (negative)
 uniform float uAngle;
 uniform sampler2D uTexture; // Declare the texture uniform
+uniform vec3 uGeometryCenter;
 
 // Output color
 out vec4 fragColor;
@@ -31,30 +32,37 @@ out vec4 fragColor;
 void main() {
     vec4 texColor = texture(uTexture, vUv);
 
-    // Center of the concentric circles
-    vec2 center = vec2(0.5, 0.5);
-    
-    // Calculate distance from center (radius)
-    vec2 uv = vUv - center;
-    float radius = length(uv);
+    float radius = length(vPosition - uGeometryCenter);
     
     // Time-based animation for expansion
     vec2 offset = 4.0 * -1.0 * uSpeed * uTime;
 
-    float pattern = normalizedSin(offset.x + radius * uBarRingCount * 2.0 * PI);
+    float pattern = normalizedSin(offset.x + radius * 1.0 * 2.0 * PI);
     
     // Create sharper rings with step function
-    float rings = step(0.5, pattern);
+    float rings = pattern;
 
-    float g = clamp(600.0 * normalizedGaussian(radius, 0.0, 0.1), 0.0, 1.0);
-    // vec3 gZeroColor = vec3(1.0-g) * uBaseColor;
-    vec3 gZeroColor = mix(uBaseColor, vec3(1.0), g);
     vec3 ringsForegroundColor = vec3((1.0 - rings)) * uBarRingForegroundColor;
     vec3 ringsBackgroundColor = vec3(rings) * uBarRingBackgroundColor;
 
+    // Normalized light direction (pointing downward and to the side)
+    vec3 lightDir = normalize(uGeometryCenter);
+    
+    // Simple diffuse lighting
+    float diffuse = max(dot(vNormal, lightDir), 0.0);
+    
+    // Compute view direction and reflection for specular
+    vec3 viewDir = normalize(-vPosition);
+    vec3 reflectDir = reflect(-lightDir, vNormal);
+    float specular = pow(max(dot(viewDir, reflectDir), 0.5), 16.0);
 
-    // vec3 finalColor = mix(uBaseColor,  gZeroColor + g*(ringsForegroundColor+ringsBackgroundColor-gZeroColor), uEventIntensity);
-    vec3 finalColor = mix(uBaseColor,  gZeroColor + mix(uBaseColor, ringsForegroundColor+ringsBackgroundColor-gZeroColor, g), uBarRingOpacity);
+    vec3 color = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
+    // Combine diffuse and specular lighting
+    vec3 ambient = color * 0.2;
+    vec3 diffuseColor = color * diffuse * 0.6;
+    vec3 specularColor = vec3(1.0) * specular * 0.4;
+
+    vec3 finalColor = ambient + diffuseColor + specularColor;
     
     if (uEvent == 1) {
         // Keep text black and change texture white to base color

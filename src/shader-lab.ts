@@ -11,16 +11,20 @@ import { GUIManager } from "./guimanager";
 import vertexShader from "./glsl/plane-shader/main.vert";
 // import fragmentShader from "../glsl/plane-shader/main.frag";
 // import fragmentShader from "../glsl/plane-shader/gaussian.frag";
+import paddleFragmentShader from "./glsl/plane-shader/paddle.frag";
 import stripesFragmentShader from "./glsl/plane-shader/stripes.frag";
 import circlesFragmentShader from "./glsl/plane-shader/concentricCircles.frag";
+import { TexturedRoundedPaddle } from "./entities/TexturedRoundedPaddle";
+import { ShaderPlane } from "./entities/ShaderPlane";
+import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
 
-interface CustomShaderMaterial extends THREE.RawShaderMaterial {
+interface CustomShaderMaterial extends THREE.RawShaderMaterial, PlaneMaterial {
   update: (params?: any) => { updatedUniforms: string[] };
 }
 
 type Plane = THREE.Mesh<
   THREE.BufferGeometry<THREE.NormalBufferAttributes>,
-  PlaneMaterial,
+  PlaneMaterial | THREE.Material | THREE.Material[],
   THREE.Object3DEventMap
 > | null;
 
@@ -32,7 +36,7 @@ export class ShaderLab {
   private _statsManager: StatsManager;
   private _customMaterials: CustomShaderMaterial[] = []; // Array to track custom materials for updates
   private _guimanager: GUIManager;
-  private _plane: Plane = null;
+  private _mesh: Plane = null;
   private _backgroundColor: THREE.Color = new THREE.Color(0x000000);
 
   constructor(canvas: HTMLCanvasElement) {
@@ -85,17 +89,12 @@ export class ShaderLab {
     this._scene.add(directionalLight);
 
     //   Use for testing plane
-    this._camera.position.set(0.0, 0.0, 0.7);
-    console.log(this._camera.rotation);
+    // this._camera.position.set(0.0, 0.0, 0.7);
 
     // Use for testing objects
-    // this._camera.position.set(8, 5, 5);
-    // const controls = new OrbitControls(this._camera, this._renderer.domElement);
-    // controls.update();
-
-    // Load the models
-    // this.loadModelAndCreateClone();
-    // this.loadModelAndAddTextures();
+    this._camera.position.set(8, 5, 5);
+    const controls = new OrbitControls(this._camera, this._renderer.domElement);
+    controls.update();
 
     const axesHelper = new THREE.AxesHelper(5);
     this._scene.add(axesHelper);
@@ -103,7 +102,45 @@ export class ShaderLab {
     this._guimanager = new GUIManager(this, this._renderer);
     this._statsManager = new StatsManager();
 
-    this.createPlane();
+    this.createGUIControlledMaterials();
+    this._customMaterials = [
+      ...this._customMaterials,
+      ...Array.from(this._guimanager.planeMaterials.values()),
+    ];
+
+    const texturedPaddle = new TexturedRoundedPaddle(
+      this._renderer,
+      this._scene
+    );
+
+    const pulsatingRoundedPaddleMaterial = new PlaneMaterial(
+      vertexShader,
+      paddleFragmentShader,
+      {
+        uniforms: {
+          uGeometryCenter: new THREE.Vector3(-4, 0.5, 1.0),
+          uBarRingForegroundColor: new THREE.Color("pink"),
+          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+        },
+      }
+    );
+    this._customMaterials.push(pulsatingRoundedPaddleMaterial);
+
+    const pulsatingRoundedPaddle = new PulsatingRoundedPaddle(
+      this._renderer,
+      this._scene,
+      pulsatingRoundedPaddleMaterial,
+      new THREE.Vector3(-4, 0, 0)
+    );
+
+    const shaderPlane = new ShaderPlane(
+      this._renderer,
+      this._scene,
+      this._customMaterials[0],
+      new THREE.Vector3(5, 0.5, 0)
+    );
+
+    this.mesh = shaderPlane.plane;
 
     // Handle window resize
     window.addEventListener("resize", () => {
@@ -119,25 +156,25 @@ export class ShaderLab {
     this.animate();
   }
 
-  public get plane(): Plane {
-    return this._plane;
+  public get mesh(): Plane {
+    return this._mesh;
   }
 
-  public set plane(v: Plane) {
-    this._plane = v;
+  public set mesh(v: Plane) {
+    this._mesh = v;
   }
 
-  public getPlaneMaterial(): PlaneMaterial | null {
-    if (!this.plane) {
+  public getMeshMaterial(): PlaneMaterial | null {
+    if (!this.mesh) {
       return null;
     }
-    return this.plane.material;
+    return this.mesh.material;
   }
 
-  public setPlaneMaterial(material: PlaneMaterial | null) {
-    if (this.plane && material) {
-      console.log("Changing plane material", material);
-      this.plane.material = material;
+  public setMeshMaterial(material: PlaneMaterial | null) {
+    if (this.mesh && material) {
+      console.log("Changing mesh material", material);
+      this.mesh.material = material;
     }
   }
 
@@ -147,8 +184,9 @@ export class ShaderLab {
     this._scene.background = this._backgroundColor;
   }
 
-  private createPlane() {
-    const geometry = new THREE.PlaneGeometry(1, 1);
+  private createGUIControlledMaterials() {
+    // Create plane materials
+    const paddle = new PlaneMaterial(vertexShader, paddleFragmentShader);
     const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader, {
       uniforms: {
         uBarRingForegroundColor: new THREE.Color("black"),
@@ -157,222 +195,10 @@ export class ShaderLab {
     });
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
-    // Register the material for updates
-    this._customMaterials.push(stripes);
-    this._customMaterials.push(circles);
-
-    // Create and add the plane to the scene
-    this.plane = new THREE.Mesh(geometry, stripes);
-    this.plane.position.set(0, 0, 0);
-    this._scene.add(this.plane);
-
+    this._guimanager.addPlaneMaterial(paddle, "paddle");
     this._guimanager.addPlaneMaterial(stripes, "stripes");
     this._guimanager.addPlaneMaterial(circles, "circles");
     this._guimanager.setupPlaneMaterialFolder();
-  }
-
-  private loadModelAndCreateClone() {
-    const loader = new GLTFLoader();
-
-    loader.load(
-      "/assets/models/paddle_turqoise_metal.glb",
-      (gltf) => {
-        // Find the original paddle mesh
-        const originalMesh = gltf.scene.children.find(
-          (child) => child.name === "Paddle"
-        ) as THREE.Mesh;
-
-        if (originalMesh && originalMesh.isObject3D) {
-          // Add the original to the scene
-          this._scene.add(originalMesh);
-
-          // Create a new mesh with the same geometry but our custom material
-          const testMaterial = new TestMaterial();
-          this._customMaterials.push(testMaterial);
-
-          const testMaterialFlash = new TestMaterialFlash();
-          this._customMaterials.push(testMaterialFlash);
-
-          // Clone the mesh
-          this.createShaderClone(originalMesh, testMaterial);
-
-          this.createShaderClone(
-            originalMesh,
-            testMaterialFlash,
-            new THREE.Vector3(5, 0, 5)
-          );
-        } else {
-          console.error("Original paddle mesh not found or not a mesh");
-        }
-      },
-      undefined,
-      (error) => console.error("Couldn't load model", error)
-    );
-  }
-
-  private loadModelAndAddTextures() {
-    const loader = new GLTFLoader();
-
-    // Pre-load textures
-    const textureLoader = new THREE.TextureLoader();
-
-    const map = textureLoader.load(
-      "/assets/maps/MetalNoise4Diffuse.png",
-      (tex) => {
-        tex.name = "MetalNoise4Diffuse";
-        console.log("Loading texture", tex);
-      },
-      undefined,
-      (error) => console.error("Error loading diffuse texture", error)
-    );
-    const roughnessMap = textureLoader.load(
-      "/assets/maps/MetalNoise4Roughness.png",
-      (tex) => {
-        tex.name = "MetalNoise4Roughness";
-        console.log("Loading texture", tex);
-      },
-      undefined,
-      (error) => console.error("Error loading roughness texture", error)
-    );
-    const metalnessMap = textureLoader.load(
-      "/assets/maps/MetalNoise4Metalness.png",
-      (tex) => {
-        tex.name = "MetalNoise4Metalness";
-        console.log("Loading texture", tex);
-      },
-      undefined,
-      (error) => console.error("Error loading metalness texture", error)
-    );
-
-    // Configure texture properties
-    map.colorSpace = THREE.SRGBColorSpace;
-    map.wrapS = THREE.RepeatWrapping;
-    map.wrapT = THREE.RepeatWrapping;
-    map.repeat.set(1, 1); // Adjust repeating as needed
-    map.rotation = Math.PI / 2;
-
-    // Also configure roughness texture
-    roughnessMap.wrapS = THREE.RepeatWrapping;
-    roughnessMap.wrapT = THREE.RepeatWrapping;
-    roughnessMap.repeat.set(1, 1);
-    roughnessMap.rotation = Math.PI / 2;
-
-    metalnessMap.wrapS = THREE.RepeatWrapping;
-    metalnessMap.wrapT = THREE.RepeatWrapping;
-    metalnessMap.repeat.set(1, 1);
-    metalnessMap.rotation = Math.PI / 2;
-
-    loader.load(
-      "/assets/models/paddle_turqoise_metal_noise4.glb",
-      (gltf) => {
-        // Find the original paddle mesh
-        const originalMesh = gltf.scene.children.find(
-          (child) => child.name === "Paddle"
-        ) as THREE.Mesh;
-
-        if (originalMesh && originalMesh.isObject3D) {
-          // Option 2: MeshStandardMaterial (PBR with lighting)
-          const material = new THREE.MeshStandardMaterial({
-            map,
-            roughnessMap,
-            metalnessMap,
-            // roughness: 0.5,
-            // metalness: 0.8,
-            envMapIntensity: 1.0,
-          });
-
-          originalMesh.name = "PaddleShaderWithTexture";
-          originalMesh.material = material;
-          originalMesh.position.set(0, 0, 3);
-          originalMesh.material.needsUpdate = true;
-
-          // Create an environment map for better metal reflections
-          //   const envMapLoader = new THREE.CubeTextureLoader();
-          //   const envMap = envMapLoader.load([
-          //     '/assets/envmap/px.jpg', '/assets/envmap/nx.jpg',
-          //     '/assets/envmap/py.jpg', '/assets/envmap/ny.jpg',
-          //     '/assets/envmap/pz.jpg', '/assets/envmap/nz.jpg'
-          //   ]);
-
-          // If you don't have an envmap, you can use this alternative:
-          const envMap = new THREE.PMREMGenerator(this._renderer).fromScene(
-            new THREE.Scene()
-          ).texture;
-
-          this._scene.environment = envMap;
-
-          // Make sure UVs are properly set up
-          if (!originalMesh.geometry.attributes.uv) {
-            console.warn("Mesh has no UV coordinates, generating them");
-            originalMesh.geometry.setAttribute(
-              "uv",
-              new THREE.BufferAttribute(
-                this.generateBasicUVs(originalMesh.geometry),
-                2
-              )
-            );
-          }
-
-          this._scene.add(originalMesh);
-        } else {
-          console.error("Original paddle mesh not found or not a mesh");
-        }
-      },
-      undefined,
-      (error) => console.error("Couldn't load model", error)
-    );
-  }
-
-  // Method to generate basic UVs if the mesh doesn't have them
-  private generateBasicUVs(geometry: THREE.BufferGeometry): Float32Array {
-    const positionAttribute = geometry.getAttribute("position");
-    const count = positionAttribute.count;
-    const uvs = new Float32Array(count * 2);
-
-    // Generate simple planar UVs based on position
-    for (let i = 0; i < count; i++) {
-      const x = positionAttribute.getX(i);
-      const y = positionAttribute.getY(i);
-
-      uvs[i * 2] = (x + 1) / 2; // U: map from [-1,1] to [0,1]
-      uvs[i * 2 + 1] = (y + 1) / 2; // V: map from [-1,1] to [0,1]
-    }
-
-    return uvs;
-  }
-
-  private createShaderClone(
-    originalMesh: THREE.Mesh,
-    material: THREE.RawShaderMaterial,
-    position?: THREE.Vector3
-  ) {
-    // Make sure we have a valid mesh to clone
-    if (!originalMesh.geometry) {
-      console.error("Original mesh has no geometry", originalMesh);
-      return;
-    }
-
-    // Clone the geometry
-    const clonedGeometry = originalMesh.geometry.clone();
-
-    // Create the new mesh
-    const clonedMesh = new THREE.Mesh(clonedGeometry, material);
-    clonedMesh.name = "PaddleShaderClone";
-
-    // Position the clone next to the original
-    clonedMesh.position.copy(originalMesh.position);
-    clonedMesh.position.set(
-      ...(position?.toArray() ||
-        clonedMesh.position.add(new THREE.Vector3(5, 0, 0)).toArray())
-    ); // Offset to the right
-
-    // Copy rotation and scale
-    clonedMesh.rotation.copy(originalMesh.rotation);
-    clonedMesh.scale.copy(originalMesh.scale);
-
-    // Add to scene
-    this._scene.add(clonedMesh);
-    console.log("Created shader clone of the paddle", clonedMesh);
   }
 
   private animate() {

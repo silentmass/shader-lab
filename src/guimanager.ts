@@ -411,8 +411,12 @@ export class GUIManager {
   public set planeMaterial(material: PlaneMaterial | null) {
     this._planeMaterial = material;
 
-    // Change parent plane material
-    this._parentRef.setPlaneMaterial(material);
+    // Change parent mesh material
+    this._parentRef.setMeshMaterial(material);
+  }
+
+  public get planeMaterials(): Map<string, PlaneMaterial> {
+    return this._planeMaterials;
   }
 
   public addPlaneMaterial(material: PlaneMaterial, name: string): void {
