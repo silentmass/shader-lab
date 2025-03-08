@@ -17,6 +17,7 @@ const DEFAULT_UNIFORMS = {
   angle: Math.PI / 1.0,
   texture: null as THREE.Texture | null,
   geometryCenter: new THREE.Vector3(0, 0, 0),
+  cameraPosition: new THREE.Vector3(8, 5, 5),
 };
 
 interface Uniforms {
@@ -34,6 +35,7 @@ interface Uniforms {
   uAngle?: number;
   uTexture?: THREE.Texture | null;
   uGeometryCenter?: THREE.Vector3;
+  uCameraPosition?: THREE.Vector3;
 }
 
 interface PlaneOptions {
@@ -56,6 +58,8 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _texture: THREE.Texture | null = DEFAULT_UNIFORMS.texture;
   private _geometryCenter: THREE.Vector3 =
     DEFAULT_UNIFORMS.geometryCenter.clone();
+  private _cameraPosition: THREE.Vector3 =
+    DEFAULT_UNIFORMS.cameraPosition.clone();
 
   // For timed events
   private _eventStartTime: number = 0;
@@ -121,6 +125,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
         value:
           options?.uniforms?.uGeometryCenter ?? DEFAULT_UNIFORMS.geometryCenter,
       },
+      uCameraPosition: {
+        value:
+          options?.uniforms?.uCameraPosition ?? DEFAULT_UNIFORMS.cameraPosition,
+      },
     };
 
     // Call super with prepared uniforms
@@ -148,6 +156,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     this._angle = uniforms.uAngle.value;
     this._texture = uniforms.uTexture.value;
     this._geometryCenter = uniforms.uGeometryCenter.value.clone();
+    this._cameraPosition = uniforms.uCameraPosition.value.clone();
 
     this._clock = new THREE.Clock();
     this._clock.start();
@@ -195,6 +204,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     this.setStripeCount(DEFAULT_UNIFORMS.barRingCount);
     this.setSpeed(DEFAULT_UNIFORMS.speed.clone());
     this.setAngle(DEFAULT_UNIFORMS.angle);
+    this.setGeometryCenter(DEFAULT_UNIFORMS.geometryCenter.clone());
 
     // Reset event state
     this._eventActive = false;
@@ -356,13 +366,27 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
   /**
    * Sets the geometry center uniform only if the value has changed
-   * @param geometryCenter The new angle value
+   * @param geometryCenter The new geometry center value
    * @returns Boolean indicating whether the uniform was updated
    */
   public setGeometryCenter(geometryCenter: THREE.Vector3): boolean {
     if (this._geometryCenter !== geometryCenter) {
       this._geometryCenter = geometryCenter;
       this.uniforms.uGeometryCenter.value = this._geometryCenter;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the camera position uniform only if the value has changed
+   * @param cameraPosition The new camera position value
+   * @returns Boolean indicating whether the uniform was updated
+   */
+  public setCameraPosition(position: THREE.Vector3): boolean {
+    if (this._cameraPosition !== position) {
+      this._cameraPosition = position;
+      this.uniforms.uCameraPosition.value = this._cameraPosition;
       return true;
     }
     return false;
@@ -386,6 +410,7 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     angle?: number;
     triggerTimedEvent?: number;
     geometryCenter?: THREE.Vector3;
+    cameraPosition?: THREE.Vector3;
   }): { updatedUniforms: string[] } {
     const updatedUniforms: string[] = [];
 
@@ -477,6 +502,13 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       }
 
       if (
+        params.cameraPosition &&
+        this.setCameraPosition(params.cameraPosition)
+      ) {
+        updatedUniforms.push("uCameraPosition");
+      }
+
+      if (
         params.triggerTimedEvent !== undefined &&
         params.triggerTimedEvent > 0.0
       ) {
@@ -530,5 +562,9 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
 
   public getGeometryCenter(): THREE.Vector3 {
     return this._geometryCenter;
+  }
+
+  public getCameraPosition(): THREE.Vector3 {
+    return this._cameraPosition;
   }
 }

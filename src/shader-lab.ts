@@ -5,7 +5,7 @@ import { StatsManager } from "./statsmanager";
 import { TestMaterial } from "./materials/TestMaterial";
 import { TestMaterialFlash } from "./materials/TestMaterialFlash";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
-import { color } from "three/tsl";
+import { cameraPosition, color } from "three/tsl";
 import { GUIManager } from "./guimanager";
 
 import vertexShader from "./glsl/plane-shader/main.vert";
@@ -14,6 +14,7 @@ import vertexShader from "./glsl/plane-shader/main.vert";
 import paddleFragmentShader from "./glsl/plane-shader/paddle.frag";
 import stripesFragmentShader from "./glsl/plane-shader/stripes.frag";
 import circlesFragmentShader from "./glsl/plane-shader/concentricCircles.frag";
+import pulsatingRingFragmentShader from "./glsl/plane-shader/pulsatingRing.frag";
 import { TexturedRoundedPaddle } from "./entities/TexturedRoundedPaddle";
 import { ShaderPlane } from "./entities/ShaderPlane";
 import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
@@ -80,12 +81,15 @@ export class ShaderLab {
       1000
     );
 
-    const light = new THREE.AmbientLight(0x404040, 5.0); // soft white light
+    const light = new THREE.AmbientLight(0x404040, 2.0 * Math.PI); // soft white light
     this._scene.add(light);
 
     // White directional light at half intensity shining from the top.
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    directionalLight.position.set(-5, 4, 2);
+    const directionalLight = new THREE.DirectionalLight(
+      0xffffff,
+      1.0 * Math.PI
+    );
+    directionalLight.position.set(1, 1, 1);
     this._scene.add(directionalLight);
 
     //   Use for testing plane
@@ -113,12 +117,16 @@ export class ShaderLab {
       this._scene
     );
 
+    const pulsatingRoundedPaddlePosition = new THREE.Vector3(4, 0, 0);
+
     const pulsatingRoundedPaddleMaterial = new PlaneMaterial(
       vertexShader,
       paddleFragmentShader,
       {
         uniforms: {
-          uGeometryCenter: new THREE.Vector3(-4, 0.5, 1.0),
+          uGeometryCenter: pulsatingRoundedPaddlePosition
+            .clone()
+            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
           uBarRingForegroundColor: new THREE.Color("pink"),
           uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
         },
@@ -130,14 +138,41 @@ export class ShaderLab {
       this._renderer,
       this._scene,
       pulsatingRoundedPaddleMaterial,
-      new THREE.Vector3(-4, 0, 0)
+      pulsatingRoundedPaddlePosition
     );
+
+    // Pulsating ring paddle
+    const pulsatingRingRoundedPaddlePosition = new THREE.Vector3(8, 0, 0);
+
+    const pulsatingRingRoundedPaddleMaterial = new PlaneMaterial(
+      vertexShader,
+      pulsatingRingFragmentShader,
+      {
+        uniforms: {
+          uGeometryCenter: pulsatingRingRoundedPaddlePosition
+            .clone()
+            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
+          uBarRingForegroundColor: new THREE.Color("pink"),
+          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+        },
+      }
+    );
+    this._customMaterials.push(pulsatingRingRoundedPaddleMaterial);
+
+    const pulsatingRingRoundedPaddle = new PulsatingRoundedPaddle(
+      this._renderer,
+      this._scene,
+      pulsatingRingRoundedPaddleMaterial,
+      pulsatingRingRoundedPaddlePosition
+    );
+
+    // Set shader plane
 
     const shaderPlane = new ShaderPlane(
       this._renderer,
       this._scene,
       this._customMaterials[0],
-      new THREE.Vector3(5, 0.5, 0)
+      new THREE.Vector3(-3, 0.5, 0)
     );
 
     this.mesh = shaderPlane.plane;
@@ -214,7 +249,9 @@ export class ShaderLab {
 
     // Update all custom shader materials
     for (const material of this._customMaterials) {
-      const updateResult = material.update();
+      const updateResult = material.update({
+        cameraPosition: this._camera.position,
+      });
       // We can check if any uniforms were updated during this frame
       if (updateResult.updatedUniforms.length > 0) {
         // Log or react to specific uniform updates if needed

@@ -4,6 +4,7 @@
 in vec3 position;
 in vec3 normal;
 in vec2 uv;
+in vec2 screen;
 
 // Uniform matrices required for 3D rendering
 uniform mat4 modelMatrix;
@@ -17,10 +18,15 @@ out vec2 vUv;
 out vec3 vNormal;
 out vec3 vPosition;
 out float vDistanceToCenter; // New output for distance to center
+out vec2 vScreen;
 
 void main() {
     // Pass UV coordinates to fragment shader
     vUv = uv;
+
+    vNormal = normal;
+
+    vScreen = screen;
     
     // Calculate position with a simple animation
     vec3 pos = position;
