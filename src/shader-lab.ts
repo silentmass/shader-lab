@@ -88,13 +88,23 @@ export class ShaderLab {
     directionalLight.position.set(1, 1, 1);
     this._scene.add(directionalLight);
 
-    //   Use for testing plane
-    // this._camera.position.set(-3.0, 0.5, 0.7);
+    const shaderPlanePosition = new THREE.Vector3(-3, 0.5, 0);
 
-    // Use for testing objects
-    this._camera.position.set(8, 5, 5);
-    const controls = new OrbitControls(this._camera, this._renderer.domElement);
-    controls.update();
+    const focusPlane = false;
+
+    if (focusPlane) {
+      //   Use for testing plane
+      this._camera.position.set(-3.0, 0.5, 0.7);
+      this._camera.lookAt(shaderPlanePosition);
+    } else {
+      // Use for testing objects
+      this._camera.position.set(8, 5, 5);
+      const controls = new OrbitControls(
+        this._camera,
+        this._renderer.domElement
+      );
+      controls.update();
+    }
 
     const axesHelper = new THREE.AxesHelper(5);
     this._scene.add(axesHelper);
@@ -173,8 +183,6 @@ export class ShaderLab {
     );
 
     // Set shader plane
-
-    const shaderPlanePosition = new THREE.Vector3(-3, 0.5, 0);
 
     const initialShaderPlaneMaterial = new PlaneMaterial(
       vertexShader,

@@ -5,7 +5,8 @@ import { stripVersion } from "./MaterialUtils";
 const DEFAULT_UNIFORMS = {
   time: 1.0,
   color: new THREE.Color(0x00cccc),
-  baseColor: new THREE.Color("grey"),
+  // baseColor: new THREE.Color("grey"),
+  baseColor: new THREE.Color("red"),
   barRingForegroundColor: new THREE.Color("blue"),
   barRingBackgroundColor: new THREE.Color("red"),
   barRingOpacity: 1.0,

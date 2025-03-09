@@ -50,7 +50,49 @@ void main() {
 
     vec3 color = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
 
-    vec3 finalColor = color;
+    // vec3 finalColor = color;
+
+    // Get vector from center to current position (3D)
+    vec3 toPosition = vPosition.xyz - uGeometryCenter.xyz;
+
+    vec3 direction = normalize(toPosition);
+    
+    // Calculate polar angle (azimuthal angle in spherical coordinates)
+    float azimuthalAngle = atan(direction.y, direction.x);
+    // Convert to [0, 2π] range
+    azimuthalAngle = azimuthalAngle < 0.0 ? azimuthalAngle + 2.0 * PI : azimuthalAngle;
+    
+    // Calculate elevation angle (polar angle in spherical coordinates)
+    float r = length(toPosition);
+    float elevationAngle = acos(toPosition.z / r);
+    
+    // Add symmetry
+    int azimuthalFolds = 8;
+    float symmetricAzimuthal = mod(azimuthalAngle, 2.0 * PI / float(azimuthalFolds));
+    
+    int elevationFolds = 4;
+    float symmetricElevation = mod(elevationAngle, PI / float(elevationFolds));
+    
+    // Combined symmetric pattern
+    float symmetricPattern = normalizedSin(symmetricAzimuthal * 72.0) * normalizedSin(symmetricElevation * 72.0);
+
+    // Rest of your code remains the same
+    float slowWaveSpeed = 0.5;
+    float slowWavePeriod = 1.0/slowWaveSpeed;
+    float slowWaveCycle = (uTime/slowWavePeriod) - floor(uTime/slowWavePeriod);
+    float slowWave = normalizedGaussian(radius, slowWaveCycle, 0.05);
+    slowWave = slowWave + normalizedGaussian(radius, slowWaveCycle+0.05, 0.01);
+    vec3 slowWaveColor = vec3(slowWave) * uBarRingBackgroundColor * symmetricPattern;
+
+    float fastWaveSpeed = 1.0;
+    float fastWavePeriod = 1.0/fastWaveSpeed;
+    float fastWaveActive = step(0.0, slowWaveCycle) * step(slowWaveCycle, fastWavePeriod/slowWavePeriod);
+
+    float fastWaveCycle = (uTime/fastWavePeriod) - floor(uTime/fastWavePeriod);
+    float fastWave = fastWaveActive * normalizedGaussian(radius, fastWaveCycle, 0.01);
+    vec3 fastWaveColor = uBaseColor * fastWave;
+
+    vec3 finalColor = slowWaveColor+fastWaveColor;
 
     
     if (uEvent == 1) {

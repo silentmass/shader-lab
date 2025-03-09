@@ -68,6 +68,7 @@ void main() {
     vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uBarRingForegroundColor;
     vec3 ringsBackgroundColor = vec3(pattern) * uBarRingBackgroundColor;
     vec3 patternColor = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
+    
 
     // Set up our PBR variables
     vec3 albedo = patternColor;
