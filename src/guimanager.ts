@@ -412,7 +412,7 @@ export class GUIManager {
     this._planeMaterial = material;
 
     // Change parent mesh material
-    this._parentRef.setMeshMaterial(material);
+    this._parentRef.setGUIControlledMeshesMaterial(material);
   }
 
   public get planeMaterials(): Map<string, PlaneMaterial> {

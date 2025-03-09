@@ -25,6 +25,8 @@ uniform float uAngle;
 uniform sampler2D uTexture;
 uniform vec3 uGeometryCenter;
 uniform vec3 uCameraPosition;
+uniform vec3 uLightPosition;
+uniform vec3 uLightColor;
 
 // Output color
 out vec4 fragColor;
@@ -54,33 +56,28 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 }
 
 void main() {
-    // Set up our PBR variables
-    // vec3 albedo = uBarRingBackgroundColor;
-
     float radius = length(vPosition - uGeometryCenter);
     
     // Time-based animation for expansion
     vec2 offset = 4.0 * -1.0 * uSpeed * uTime;
+
+    // Do a single ring
     float nRings = 1.0;
-
-    float rings = normalizedSin(offset.x + radius * nRings * 2.0 * PI);
+    float pattern = normalizedSin(offset.x + radius * nRings * 2.0 * PI);
     
-    vec3 ringsForegroundColor = vec3((1.0 - rings)) * uBarRingForegroundColor;
-    vec3 ringsBackgroundColor = vec3(rings) * uBarRingBackgroundColor;
+    vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uBarRingForegroundColor;
+    vec3 ringsBackgroundColor = vec3(pattern) * uBarRingBackgroundColor;
+    vec3 patternColor = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
 
-    vec3 albedo = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
+    // Set up our PBR variables
+    vec3 albedo = patternColor;
     
     float metallic = 1.0;
     float roughness = 0.5; // Slightly smoother than before
     
-    // Camera and light setup
-    vec3 viewPos = uCameraPosition;
-    vec3 lightPos = vec3(10.0);
-    vec3 lightColor = vec3(1.0);
-    
     // Calculate the view and normal vectors
     vec3 N = normalize(vNormal);
-    vec3 V = normalize(viewPos - vPosition);
+    vec3 V = normalize(uCameraPosition - vPosition);
     
     // Ensure we have valid vectors
     if (length(N) < 0.5 || length(V) < 0.5) {
@@ -89,14 +86,14 @@ void main() {
     }
     
     // Light calculations
-    vec3 L = normalize(lightPos - vPosition);
+    vec3 L = normalize(uLightPosition - vPosition);
     vec3 H = normalize(V + L);
-    float distance = length(lightPos - vPosition);
-    float attenuation = 1000.0 / pow(distance, 2.0);
-    vec3 radiance = lightColor * attenuation;
+    float distance = length(uLightPosition - vPosition);
+    float attenuation = 5000.0 / pow(distance, 2.0);
+    vec3 radiance = uLightColor * attenuation;
     
     // Cook-Torrance BRDF
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+    vec3  F0 = mix (vec3 (0.04), pow(albedo, vec3 (2.2)), metallic);
     
     // Calculate all the terms
     float NDF = distributionGGX(N, H, roughness);
@@ -109,22 +106,24 @@ void main() {
     kD *= 1.0 - metallic;
     
     vec3 numerator = NDF * G * F;
-    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-    vec3 specular = numerator / denominator;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+    vec3  specular    = numerator / max(denominator, 0.001);
     
     // Combine diffuse and specular
     float NdotL = max(dot(N, L), 0.0);
     vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
-
-    // Add emissive component to make the colors pop more
-    vec3 emissive = albedo * 0.3; // Add glow to the colors
     
-    // Add ambient light to prevent pure black in shadows
-    vec3 ambient = vec3(0.03) * albedo;
-    vec3 color = ambient + Lo + emissive;
+    vec3 color = Lo;
+
+    // // Add emissive component to make the colors pop more
+    // vec3 emissive = albedo * 0.3; // Add glow to the colors
+    
+    // // Add ambient light to prevent pure black in shadows
+    // vec3 ambient = vec3(0.03) * albedo;
+    // vec3 color = ambient + Lo + emissive;
     
     // HDR tonemapping and gamma correction
-    // color = color / (color + vec3(1.0)); // Simple Reinhard tone mapping
+    color = color / (color + vec3(1.0)); // Simple Reinhard tone mapping
     // color = pow(color, vec3(1.0/2.2));   // Gamma correction
     
     // Add some variation based on position to make it more interesting

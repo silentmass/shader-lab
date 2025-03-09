@@ -11,21 +11,24 @@ export class PulsatingRoundedPaddle {
     rendered: THREE.WebGLRenderer,
     scene: THREE.Scene,
     material: PlaneMaterial,
-    position?: THREE.Vector3
+    position?: THREE.Vector3,
+    onLoadSuccess?: (mesh: THREE.Mesh) => void
   ) {
     this._renderer = rendered;
     this._scene = scene;
     this.setupPaddle(
       "PulsatingRoundedPaddle",
       material,
-      position ?? new THREE.Vector3(0, 0, 0)
+      position ?? new THREE.Vector3(0, 0, 0),
+      onLoadSuccess
     );
   }
 
   private setupPaddle(
     name: string,
     material: PlaneMaterial,
-    position: THREE.Vector3
+    position: THREE.Vector3,
+    onLoadSuccess?: (mesh: THREE.Mesh) => void
   ): void {
     new GLTFLoader().load(
       "/assets/models/rounded_paddle.glb",
@@ -42,6 +45,9 @@ export class PulsatingRoundedPaddle {
           originalMesh.material.needsUpdate = true;
           this.paddle = originalMesh;
           this.scene.add(originalMesh);
+          if (onLoadSuccess) {
+            onLoadSuccess(originalMesh);
+          }
         } else {
           console.error("Original paddle mesh not found or not a mesh");
         }
