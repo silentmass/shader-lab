@@ -137,8 +137,9 @@ export class ShaderLab {
           uGeometryCenter: pulsatingAluminumPaddlePosition
             .clone()
             .add(new THREE.Vector3(0.0, 0.5, 1.0)),
-          uBarRingForegroundColor: new THREE.Color("pink"),
+          uBarRingForegroundColor: new THREE.Color("#2F646A"),
           uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+          uBaseColor: new THREE.Color("#6A452F"),
         },
       }
     );

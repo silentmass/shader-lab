@@ -68,10 +68,63 @@ void main() {
     vec3 ringsForegroundColor = vec3((1.0 - pattern)) * uBarRingForegroundColor;
     vec3 ringsBackgroundColor = vec3(pattern) * uBarRingBackgroundColor;
     vec3 patternColor = mix(uBaseColor,  ringsForegroundColor+ringsBackgroundColor, uBarRingOpacity);
+
+
+    // Scale the radius to extend the wave's travel distance
+    float maxRadius = 3.0; // Maximum radius the wave should travel to
+    float scaledRadius = radius / maxRadius; // Normalize radius to [0,1] range
+
+    // Get vector from center to current position (3D)
+    vec3 toPosition = vPosition.xyz - uGeometryCenter.xyz;
+
+    vec3 direction = normalize(toPosition);
+    
+    // Calculate polar angle (azimuthal angle in spherical coordinates)
+    float azimuthalAngle = atan(direction.y, direction.x);
+    // Convert to [0, 2π] range
+    azimuthalAngle = azimuthalAngle < 0.0 ? azimuthalAngle + 2.0 * PI : azimuthalAngle;
+    
+    // Calculate elevation angle (polar angle in spherical coordinates)
+    float r = length(toPosition);
+    float elevationAngle = acos(toPosition.z / r);
+    
+    // Add symmetry
+    int azimuthalFolds = 8;
+    float symmetricAzimuthal = mod(azimuthalAngle, 2.0 * PI / float(azimuthalFolds));
+    
+    int elevationFolds = 4;
+    float symmetricElevation = mod(elevationAngle, PI / float(elevationFolds));
+    
+    // Combined symmetric pattern
+    float symmetricPattern = normalizedSin(symmetricAzimuthal * 72.0) * normalizedSin(symmetricElevation * 72.0);
+
+    // Rest of your code remains the same
+    float slowWaveSpeed = 0.5;
+    float slowWavePeriod = 1.0/slowWaveSpeed;
+    float slowWaveCycle = (uTime/slowWavePeriod) - floor(uTime/slowWavePeriod);
+
+    
+
+    // Use the scaled radius in your Gaussian function
+    float slowWave = normalizedGaussian(scaledRadius, slowWaveCycle, 0.05);
+    slowWave = slowWave + normalizedGaussian(scaledRadius, slowWaveCycle+0.05, 0.01);
+    vec3 slowWaveColor = vec3(slowWave) * uBarRingBackgroundColor * symmetricPattern;
+
+    float fastWaveSpeed = 1.0;
+    float fastWavePeriod = 1.0/fastWaveSpeed;
+    float fastWaveActive = step(0.0, slowWaveCycle) * step(slowWaveCycle, fastWavePeriod/slowWavePeriod);
+
+    float fastWaveCycle = (uTime/fastWavePeriod) - floor(uTime/fastWavePeriod);
+    float fastWave = fastWaveActive * normalizedGaussian(scaledRadius, fastWaveCycle, 0.01);
+    fastWave = fastWave + normalizedGaussian(scaledRadius, fastWaveCycle+0.01, 0.01);
+
+    vec3 fastWaveColor = uBaseColor * fastWave;
+
+    vec3 wavesColor = slowWaveColor+fastWaveColor;
     
 
     // Set up our PBR variables
-    vec3 albedo = patternColor;
+    vec3 albedo = patternColor + wavesColor;
     
     float metallic = 1.0;
     float roughness = 0.5; // Slightly smoother than before
