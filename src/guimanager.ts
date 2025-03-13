@@ -1,13 +1,11 @@
 import * as THREE from "three";
-import { WebGLRenderer, Color, Vector2 } from "three";
+import { WebGLRenderer } from "three";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+import { ShaderLab } from "./shader-lab";
 
 const DEFAULT_MATERIAL_SETTINGS = {
   color: new THREE.Color("pink"),
-  // baseColor: new THREE.Color("gray"),
-  // barRingForegroundColor: new THREE.Color("black"),
-  // barRingBackgroundColor: new THREE.Color("yellow"),
   baseColor: new THREE.Color("#2F646A"),
   barRingForegroundColor: new THREE.Color("#6A452F"),
   barRingBackgroundColor: new THREE.Color("#90BDC3"),
@@ -22,12 +20,14 @@ const DEFAULT_MATERIAL_SETTINGS = {
 
 export class GUIManager {
   private _gui: GUI;
-  private _parentRef: any; // Replace with your actual parent class type
+  private _parentRef: ShaderLab;
   private _renderer: WebGLRenderer;
 
   private _planeMaterial: PlaneMaterial | null = null;
   private _planeControlsChanged: boolean = false;
   private _planeMaterials: Map<string, PlaneMaterial> = new Map();
+
+  private _activeMeshId: string | null = null;
 
   // Background settings
   private _mBackgroundColor: THREE.Color = new THREE.Color("#000000");
@@ -57,6 +57,114 @@ export class GUIManager {
     this.planeControlsChanged = true;
 
     this.setupBackgroundFolder();
+  }
+
+  public setupMeshSelector(): void {
+    // First remove any existing mesh selector folder
+    const existingFolder = this._gui.folders.find(
+      (f) => f._title === "Mesh Selection"
+    );
+    if (typeof existingFolder?.hide === "function") {
+      existingFolder.hide();
+    }
+
+    const meshFolder = this._gui.addFolder("Mesh Selection");
+    const thisRef = this;
+
+    // Get all mesh names - make sure they have unique names
+    const meshes = this._parentRef.guiControlledMeshes;
+    console.log(
+      "Available meshes for selector:",
+      meshes.map((m) => m.name)
+    );
+
+    // If no meshes, return
+    if (meshes.length === 0) {
+      console.warn("No meshes available for selector");
+      return;
+    }
+
+    const meshNames = meshes.map((mesh) => mesh.name || "Unnamed Mesh");
+
+    // Find the active mesh name or use the first one
+    const activeName = this._parentRef.activeMesh?.name || meshNames[0];
+
+    const meshProps = {
+      activeMesh: activeName,
+    };
+
+    // Add mesh selector dropdown
+    meshFolder
+      .add(meshProps, "activeMesh", meshNames)
+      .name("Active Mesh")
+      .onChange((selectedMeshName: string) => {
+        // Find the selected mesh by name
+        const selectedMesh = thisRef._parentRef.guiControlledMeshes.find(
+          (mesh) => mesh.name === selectedMeshName
+        );
+
+        // Update the active mesh in the parent component
+        if (selectedMesh) {
+          thisRef._parentRef.setActiveMesh(selectedMesh);
+        }
+      });
+
+    meshFolder.open();
+  }
+
+  public setupMeshSelectionFolder(): void {
+    const folderMeshSelection = this._gui.addFolder("Mesh Selection");
+    const thisRef = this;
+
+    // Get mesh names from parent's guiControlledMeshes
+    const meshNames = thisRef._parentRef.guiControlledMeshes.map(
+      (mesh: THREE.Mesh, index: number) => mesh.name || `Mesh ${index}`
+    );
+
+    const meshSelectionProps = {
+      activeMesh: meshNames[0] || "None",
+    };
+
+    folderMeshSelection
+      .add(meshSelectionProps, "activeMesh", meshNames)
+      .name("Active Mesh")
+      .onChange((meshName: string) => {
+        // Find the mesh index by name
+        const meshIndex = meshNames.indexOf(meshName);
+        if (meshIndex >= 0) {
+          const mesh = thisRef._parentRef.guiControlledMeshes[meshIndex];
+          if (mesh) {
+            thisRef._activeMeshId = mesh.uuid;
+
+            // Update GUI controls to reflect this mesh's specific uniforms
+            thisRef.updateGUIFromMeshUniforms(mesh.uuid);
+          }
+        }
+      });
+  }
+
+  private updateGUIFromMeshUniforms(meshId: string): void {
+    // Get mesh uniforms from the parent's MeshUniformsManager
+    if (this._parentRef.meshUniformsManager) {
+      const uniforms =
+        this._parentRef.meshUniformsManager.getMeshUniforms(meshId);
+      if (uniforms) {
+        // Update GUI values based on the mesh's uniforms
+        if (uniforms.uBaseColor) this._mBaseColor = uniforms.uBaseColor.clone();
+        if (uniforms.uBarRingForegroundColor)
+          this._mBarRingForegroundColor =
+            uniforms.uBarRingForegroundColor.clone();
+        if (uniforms.uBarRingBackgroundColor)
+          this._mBarRingBackgroundColor =
+            uniforms.uBarRingBackgroundColor.clone();
+
+        // Signal that controls need updating
+        this.planeControlsChanged = true;
+
+        // Force GUI to update (you might need to implement this differently based on your GUI library)
+        // this._gui.updateDisplay();
+      }
+    }
   }
 
   private setupBackgroundFolder(): void {
@@ -437,6 +545,7 @@ export class GUIManager {
   }
 
   public update(): void {
+    // Update the current material as before
     this.planeMaterial?.update({
       color: this.color,
       baseColor: this.baseColor,
@@ -450,6 +559,20 @@ export class GUIManager {
       angle: this.barRingAngle * Math.PI,
       triggerTimedEvent: this.triggerTimedEvent,
     });
+
+    // If we have an active mesh, save its current settings
+    if (this._activeMeshId && this._parentRef.meshUniformsManager) {
+      // Save the current GUI state to the mesh's specific uniforms
+      this._parentRef.meshUniformsManager.updateMeshUniforms(
+        this._activeMeshId,
+        {
+          uBaseColor: this.baseColor.clone(),
+          uBarRingForegroundColor: this.barRingForegroundColor.clone(),
+          uBarRingBackgroundColor: this.barRingBackgroundColor.clone(),
+          // Add other uniforms as needed
+        }
+      );
+    }
   }
 
   // Public methods for external control
