@@ -385,7 +385,7 @@ export class ShaderLab {
 
     // Set the first mesh as active if available
     if (this.guiControlledMeshes.length > 0) {
-      this.setActiveMesh(this.guiControlledMeshes[1]);
+      this.setActiveMesh(this.guiControlledMeshes[0]);
     }
   }
 
