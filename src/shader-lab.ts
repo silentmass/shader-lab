@@ -90,6 +90,7 @@ export class ShaderLab {
 
     const shaderPlanePosition = new THREE.Vector3(-3, 0.5, 0);
 
+    // const focusPlane = true;
     const focusPlane = false;
 
     if (focusPlane) {
@@ -117,102 +118,6 @@ export class ShaderLab {
       ...this._customMaterials,
       ...Array.from(this._guimanager.planeMaterials.values()),
     ];
-
-    // Textured paddle
-
-    const texturedAluminumPaddle = new TexturedRoundedPaddle(
-      this._renderer,
-      this._scene
-    );
-
-    // Pulsating aluminum shader paddle
-
-    const pulsatingAluminumPaddlePosition = new THREE.Vector3(4, 0, 0);
-
-    const pulsatingAluminumPaddleMaterial = new PlaneMaterial(
-      vertexShader,
-      paddleFragmentShader,
-      {
-        uniforms: {
-          uGeometryCenter: pulsatingAluminumPaddlePosition
-            .clone()
-            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
-          uBarRingForegroundColor: new THREE.Color("#2F646A"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-          uBaseColor: new THREE.Color("#6A452F"),
-        },
-      }
-    );
-
-    this._customMaterials.push(pulsatingAluminumPaddleMaterial);
-
-    const pulsatingAluminumPaddle = new PulsatingRoundedPaddle(
-      this._renderer,
-      this._scene,
-      pulsatingAluminumPaddleMaterial,
-      pulsatingAluminumPaddlePosition
-    );
-
-    // Pulsating shader paddle
-
-    const pulsatingPaddlePosition = new THREE.Vector3(8, 0, 0);
-
-    const pulsatingPaddleMaterial = new PlaneMaterial(
-      vertexShader,
-      pulsatingRingFragmentShader,
-      {
-        uniforms: {
-          uGeometryCenter: pulsatingPaddlePosition
-            .clone()
-            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
-          uBarRingForegroundColor: new THREE.Color("pink"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-        },
-      }
-    );
-
-    this._customMaterials.push(pulsatingPaddleMaterial);
-
-    const pulsatingPaddle = new PulsatingRoundedPaddle(
-      this._renderer,
-      this._scene,
-      pulsatingPaddleMaterial,
-      pulsatingPaddlePosition,
-      (mesh: THREE.Mesh): void => {
-        this.guiControlledMeshes.push(mesh);
-      }
-    );
-
-    // Set shader plane
-
-    const initialShaderPlaneMaterial = new PlaneMaterial(
-      vertexShader,
-      pulsatingRingFragmentShader,
-      {
-        uniforms: {
-          uGeometryCenter: shaderPlanePosition
-            .clone()
-            .add(new THREE.Vector3(0.0, 0.0, 0.0)),
-          // uBarRingForegroundColor: new THREE.Color("pink"),
-          uBarRingForegroundColor: new THREE.Color("#2F646A"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-          uBaseColor: new THREE.Color("#6A452F"),
-        },
-      }
-    );
-
-    this._customMaterials.push(initialShaderPlaneMaterial);
-
-    const shaderPlane = new ShaderPlane(
-      this._renderer,
-      this._scene,
-      initialShaderPlaneMaterial,
-      shaderPlanePosition
-    );
-
-    if (shaderPlane.plane) {
-      this.guiControlledMeshes.push(shaderPlane.plane);
-    }
 
     console.log("GUIControlledMeshes", this.guiControlledMeshes);
 
@@ -251,7 +156,22 @@ export class ShaderLab {
 
   private createGUIControlledMaterials() {
     // Create plane materials
-    const paddle = new PlaneMaterial(vertexShader, paddleFragmentShader);
+    const pulsatingPaddlePosition = new THREE.Vector3(0, 0, 0);
+
+    const pulsatingPaddleMaterial = new PlaneMaterial(
+      vertexShader,
+      pulsatingRingFragmentShader,
+      {
+        uniforms: {
+          uGeometryCenter: pulsatingPaddlePosition
+            .clone()
+            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
+          uBarRingForegroundColor: new THREE.Color("#6A452F"),
+          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+          uBaseColor: new THREE.Color("#2F646A"),
+        },
+      }
+    );
     const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader, {
       uniforms: {
         uBarRingForegroundColor: new THREE.Color("black"),
@@ -260,10 +180,52 @@ export class ShaderLab {
     });
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
-    this._guimanager.addPlaneMaterial(paddle, "paddle");
+    this._guimanager.addPlaneMaterial(pulsatingPaddleMaterial, "paddle");
     this._guimanager.addPlaneMaterial(stripes, "stripes");
     this._guimanager.addPlaneMaterial(circles, "circles");
     this._guimanager.setupPlaneMaterialFolder();
+
+    const pulsatingPaddle = new PulsatingRoundedPaddle(
+      this._renderer,
+      this._scene,
+      pulsatingPaddleMaterial,
+      pulsatingPaddlePosition,
+      (mesh: THREE.Mesh): void => {
+        this.guiControlledMeshes.push(mesh);
+      }
+    );
+  }
+
+  private setupShaderPlane(position: THREE.Vector3) {
+    // Set shader plane
+
+    const initialShaderPlaneMaterial = new PlaneMaterial(
+      vertexShader,
+      pulsatingRingFragmentShader,
+      {
+        uniforms: {
+          uGeometryCenter: position
+            .clone()
+            .add(new THREE.Vector3(0.0, 0.0, 0.0)),
+          uBarRingForegroundColor: new THREE.Color("#6A452F"),
+          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+          uBaseColor: new THREE.Color("#2F646A"),
+        },
+      }
+    );
+
+    this._customMaterials.push(initialShaderPlaneMaterial);
+
+    const shaderPlane = new ShaderPlane(
+      this._renderer,
+      this._scene,
+      initialShaderPlaneMaterial,
+      position
+    );
+
+    if (shaderPlane.plane) {
+      this.guiControlledMeshes.push(shaderPlane.plane);
+    }
   }
 
   private animate() {

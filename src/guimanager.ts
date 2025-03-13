@@ -5,9 +5,12 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
 const DEFAULT_MATERIAL_SETTINGS = {
   color: new THREE.Color("pink"),
-  baseColor: new THREE.Color("gray"),
-  barRingForegroundColor: new THREE.Color("black"),
-  barRingBackgroundColor: new THREE.Color("yellow"),
+  // baseColor: new THREE.Color("gray"),
+  // barRingForegroundColor: new THREE.Color("black"),
+  // barRingBackgroundColor: new THREE.Color("yellow"),
+  baseColor: new THREE.Color("#2F646A"),
+  barRingForegroundColor: new THREE.Color("#6A452F"),
+  barRingBackgroundColor: new THREE.Color("#90BDC3"),
   barRingOpacity: 1.0,
   event: 1,
   eventIntensity: 1.0,

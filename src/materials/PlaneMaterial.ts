@@ -188,7 +188,10 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   private loadTexture(): void {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load(
-      "/assets/images/stimulus.png",
+      // "/assets/images/stimulus.png",
+      // "/assets/images/sky.jpeg",
+      // "/assets/images/sky2.png",
+      "/assets/images/sky.png",
       (loadedTexture) => {
         // Configure texture properties
         loadedTexture.wrapS = THREE.RepeatWrapping;

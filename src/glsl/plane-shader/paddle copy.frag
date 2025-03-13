@@ -98,48 +98,27 @@ void main() {
     // Combined symmetric pattern
     float symmetricPattern = normalizedSin(symmetricAzimuthal * 72.0) * normalizedSin(symmetricElevation * 72.0);
 
+    // Rest of your code remains the same
     float slowWaveSpeed = 0.5;
     float slowWavePeriod = 1.0/slowWaveSpeed;
     float slowWaveCycle = (uTime/slowWavePeriod) - floor(uTime/slowWavePeriod);
-    float slowWaveTrailingWave = normalizedGaussian(scaledRadius, slowWaveCycle, 0.05);
-    float slowWaveMainWave = normalizedGaussian(scaledRadius, slowWaveCycle+0.05, 0.01);
-    float slowWave = slowWaveTrailingWave + slowWaveMainWave;
-    vec3 slowWaveColor = vec3(slowWave) * uBarRingBackgroundColor * symmetricPattern;
 
-    // Create continuous trailing wave for slow wave
-    // float continuousSlowWave = createContinuousTrail(
-    //     scaledRadius,           // Distance from center
-    //     uTime,            // Current time
-    //     0.5,              // Wave speed (same as your slowWaveSpeed)
-    //     0.3,              // Trail length
-    //     0.02,             // Main wave width
-    //     0.8               // Symmetry factor
-    // );
-
-    // float continuousSlowWave = createNoisyTrail(
-    //     scaledRadius,           // Distance from center
-    //     vUv,              // UV coordinates
-    //     vPosition,        // Position
-    //     uGeometryCenter,  // Center
-    //     uTime,            // Time
-    //     slowWaveSpeed,    // Wave speed
-    //     0.4,              // Trail length
-    //     0.05,             // Main wave width
-    //     uTexture          // Noise texture
-    // );
     
-    // Apply trailing effect to your slow wave
-    // vec3 slowWaveColor = vec3(continuousSlowWave) * uBarRingBackgroundColor * symmetricPattern;
+
+    // Use the scaled radius in your Gaussian function
+    float slowWave = normalizedGaussian(scaledRadius, slowWaveCycle, 0.05);
+    slowWave = slowWave + normalizedGaussian(scaledRadius, slowWaveCycle+0.05, 0.01);
+    vec3 slowWaveColor = vec3(slowWave) * uBarRingBackgroundColor * symmetricPattern;
 
     float fastWaveSpeed = 1.0;
     float fastWavePeriod = 1.0/fastWaveSpeed;
     float fastWaveActive = step(0.0, slowWaveCycle) * step(slowWaveCycle, fastWavePeriod/slowWavePeriod);
 
     float fastWaveCycle = (uTime/fastWavePeriod) - floor(uTime/fastWavePeriod);
-    float fastWaveTrailingWave = normalizedGaussian(scaledRadius, fastWaveCycle, 0.03);
-    float fastWaveMainWave = normalizedGaussian(scaledRadius, fastWaveCycle+0.03, 0.005);
-    float fastWave = fastWaveTrailingWave + fastWaveMainWave;
-    vec3 fastWaveColor = uBaseColor * fastWaveActive * fastWave;
+    float fastWave = fastWaveActive * normalizedGaussian(scaledRadius, fastWaveCycle, 0.01);
+    fastWave = fastWave + normalizedGaussian(scaledRadius, fastWaveCycle+0.01, 0.01);
+
+    vec3 fastWaveColor = uBaseColor * fastWave;
 
     vec3 wavesColor = slowWaveColor+fastWaveColor;
     
