@@ -131,7 +131,8 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
       },
       uGeometryCenter: {
         value:
-          options?.uniforms?.uGeometryCenter ?? DEFAULT_UNIFORMS.geometryCenter,
+          options?.uniforms?.uGeometryCenter?.clone() ??
+          DEFAULT_UNIFORMS.geometryCenter,
       },
       uCameraPosition: {
         value:

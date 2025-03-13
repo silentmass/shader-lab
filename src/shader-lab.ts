@@ -1,17 +1,17 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { StatsManager } from "./statsmanager";
+import { StatsManager } from "./StatsManager";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
-import { GUIManager } from "./guimanager";
+import { GUIManager } from "./GUIManager";
+import {
+  MeshUniformsManager,
+  MeshSpecificUniforms,
+} from "./MeshUniformsManager";
 
 import vertexShader from "./glsl/plane-shader/main.vert";
-// import fragmentShader from "../glsl/plane-shader/main.frag";
-// import fragmentShader from "../glsl/plane-shader/gaussian.frag";
-import paddleFragmentShader from "./glsl/plane-shader/paddle.frag";
 import stripesFragmentShader from "./glsl/plane-shader/stripes.frag";
 import circlesFragmentShader from "./glsl/plane-shader/concentricCircles.frag";
 import pulsatingRingFragmentShader from "./glsl/plane-shader/pulsatingRing.frag";
-import { TexturedRoundedPaddle } from "./entities/TexturedRoundedPaddle";
 import { ShaderPlane } from "./entities/ShaderPlane";
 import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
 
@@ -26,17 +26,26 @@ type GUIControlledMesh = THREE.Mesh<
 >;
 
 export class ShaderLab {
-  // Make scene accessible to GUIManager
   public _scene: THREE.Scene;
   private _renderer: THREE.WebGLRenderer;
   private _camera: THREE.PerspectiveCamera;
   private _statsManager: StatsManager;
-  private _customMaterials: CustomShaderMaterial[] = []; // Array to track custom materials for updates
+  private _customMaterials: CustomShaderMaterial[] = [];
   private _guimanager: GUIManager;
   private _guiControlledMeshes: GUIControlledMesh[] = [];
   private _backgroundColor: THREE.Color = new THREE.Color(0x000000);
 
+  private _meshUniformsManager: MeshUniformsManager;
+
+  private _shaderPlanePosition: THREE.Vector3;
+
+  private _activeMesh: GUIControlledMesh | null = null;
+
+  private _controls: OrbitControls;
+
   constructor(canvas: HTMLCanvasElement) {
+    this._meshUniformsManager = new MeshUniformsManager();
+
     // Get WebGL2 context - THREE.js r163+ requires WebGL2
     const gl = canvas.getContext("webgl2", {
       antialias: true,
@@ -88,24 +97,12 @@ export class ShaderLab {
     directionalLight.position.set(1, 1, 1);
     this._scene.add(directionalLight);
 
-    const shaderPlanePosition = new THREE.Vector3(-3, 0.5, 0);
+    this._shaderPlanePosition = new THREE.Vector3(-3, 0.5, 0);
 
-    // const focusPlane = true;
-    const focusPlane = false;
-
-    if (focusPlane) {
-      //   Use for testing plane
-      this._camera.position.set(-3.0, 0.5, 0.7);
-      this._camera.lookAt(shaderPlanePosition);
-    } else {
-      // Use for testing objects
-      this._camera.position.set(8, 5, 5);
-      const controls = new OrbitControls(
-        this._camera,
-        this._renderer.domElement
-      );
-      controls.update();
-    }
+    // Set up camera for general view
+    this._camera.position.set(8, 5, 5);
+    this._controls = new OrbitControls(this._camera, this._renderer.domElement);
+    this._controls.update();
 
     const axesHelper = new THREE.AxesHelper(5);
     this._scene.add(axesHelper);
@@ -135,49 +132,136 @@ export class ShaderLab {
     this.animate();
   }
 
-  public setGUIControlledMeshesMaterial(material: PlaneMaterial | null) {
-    if (!material) {
-      return;
+  private focusCameraOnMesh(mesh: THREE.Mesh): void {
+    // Disable controls temporarily
+    this._controls.enabled = false;
+
+    // Get the mesh position
+    const meshPosition = mesh.position.clone();
+
+    // Different camera positions based on mesh type
+    if (mesh.name === "ShaderPlaneMesh") {
+      // For the shader plane, position the camera to look at it from a specific angle
+      this._camera.position.set(
+        meshPosition.x,
+        meshPosition.y,
+        meshPosition.z + 0.7
+      );
+      this._camera.lookAt(meshPosition);
+    } else {
+      // For other meshes, use a default viewing angle
+      this._camera.position.set(
+        meshPosition.x + 3,
+        meshPosition.y + 2,
+        meshPosition.z + 3
+      );
+      this._camera.lookAt(meshPosition);
     }
-    console.log(this.guiControlledMeshes);
-    for (let i = 0; i < this.guiControlledMeshes.length; i++) {
-      if (this.guiControlledMeshes[i]) {
-        console.log("Mesh", this.guiControlledMeshes[i].name);
-        this.guiControlledMeshes[i].material = material;
+
+    // Update the controls target to match the mesh position
+    this._controls.target.copy(meshPosition);
+
+    // Re-enable controls after a short delay to allow the camera to move
+    setTimeout(() => {
+      this._controls.enabled = true;
+      this._controls.update();
+    }, 1000);
+  }
+
+  public setActiveMesh(mesh: GUIControlledMesh): void {
+    console.log("Setting active mesh:", mesh.name);
+
+    // Hide all meshes
+    for (const guiMesh of this.guiControlledMeshes) {
+      console.log(
+        `Setting visibility of ${guiMesh.name} to ${guiMesh === mesh}`
+      );
+      guiMesh.visible = guiMesh === mesh;
+    }
+
+    this._activeMesh = mesh;
+
+    // Apply the currently selected material from the GUI to this mesh
+    if (this._guimanager.planeMaterial) {
+      mesh.material = this._guimanager.planeMaterial;
+
+      // Apply mesh-specific uniforms after setting the material
+      if (this._meshUniformsManager.hasMeshUniforms(mesh.uuid)) {
+        console.log(`Applying mesh-specific uniforms for: ${mesh.name}`);
+        this._meshUniformsManager.applyUniformsToMaterial(
+          this._guimanager.planeMaterial,
+          mesh.uuid
+        );
       }
+    }
+
+    // Focus the camera on the active mesh
+    this.focusCameraOnMesh(mesh);
+
+    // Log the current geometry center for debugging
+    if (mesh.material instanceof PlaneMaterial) {
+      console.log(
+        `Active mesh geometry center: `,
+        (mesh.material as PlaneMaterial).geometryCenter
+      );
     }
   }
 
-  // Method to update scene background color
-  public updateSceneBackground(color: THREE.Color): void {
-    this._backgroundColor = color;
-    this._scene.background = this._backgroundColor;
+  public registerMeshUniforms(
+    mesh: THREE.Mesh,
+    defaultUniforms: MeshSpecificUniforms
+  ): void {
+    this._meshUniformsManager.registerMesh(mesh.uuid, defaultUniforms);
+  }
+
+  public setGUIControlledMeshesMaterial(material: PlaneMaterial | null) {
+    if (!material || !this._activeMesh) {
+      return;
+    }
+
+    console.log(`Setting material for active mesh: ${this._activeMesh.name}`);
+
+    // Set the material on the active mesh
+    this._activeMesh.material = material;
+
+    // Apply mesh-specific uniforms to the new material
+    if (this._meshUniformsManager.hasMeshUniforms(this._activeMesh.uuid)) {
+      console.log(
+        `Applying mesh-specific uniforms for: ${this._activeMesh.name}`
+      );
+      this._meshUniformsManager.applyUniformsToMaterial(
+        material,
+        this._activeMesh.uuid
+      );
+    }
   }
 
   private createGUIControlledMaterials() {
     // Create plane materials
     const pulsatingPaddlePosition = new THREE.Vector3(0, 0, 0);
 
+    // Create materials with default uniforms
     const pulsatingPaddleMaterial = new PlaneMaterial(
       vertexShader,
       pulsatingRingFragmentShader,
       {
         uniforms: {
-          uGeometryCenter: pulsatingPaddlePosition
-            .clone()
-            .add(new THREE.Vector3(0.0, 0.5, 1.0)),
+          // Default uniforms - these will be immediately overridden in each mesh's constructor
+          uGeometryCenter: new THREE.Vector3(0, 0, 0),
           uBarRingForegroundColor: new THREE.Color("#6A452F"),
           uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
           uBaseColor: new THREE.Color("#2F646A"),
         },
       }
     );
+
     const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader, {
       uniforms: {
         uBarRingForegroundColor: new THREE.Color("black"),
         uBarRingBackgroundColor: new THREE.Color("white"),
       },
     });
+
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
     this._guimanager.addPlaneMaterial(pulsatingPaddleMaterial, "paddle");
@@ -185,6 +269,29 @@ export class ShaderLab {
     this._guimanager.addPlaneMaterial(circles, "circles");
     this._guimanager.setupPlaneMaterialFolder();
 
+    // Create the shader plane - it will now apply mesh-specific uniforms directly in its constructor
+    const shaderPlaneUniforms: MeshSpecificUniforms = {
+      uGeometryCenter: this._shaderPlanePosition.clone(),
+      uBarRingForegroundColor: new THREE.Color("#6A452F"),
+      uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+      uBaseColor: new THREE.Color("#2F646A"),
+    };
+
+    new ShaderPlane(
+      this._renderer,
+      this._scene,
+      pulsatingPaddleMaterial,
+      this._shaderPlanePosition,
+      (mesh: THREE.Mesh): void => {
+        this.guiControlledMeshes.push(mesh);
+        this.registerMeshUniforms(mesh, shaderPlaneUniforms);
+        // Hide this mesh until we're ready to show it
+        mesh.visible = false;
+      },
+      shaderPlaneUniforms // Pass the uniforms here
+    );
+
+    // Create the pulsating paddle - it will now apply mesh-specific uniforms directly in its constructor
     const pulsatingPaddle = new PulsatingRoundedPaddle(
       this._renderer,
       this._scene,
@@ -192,40 +299,36 @@ export class ShaderLab {
       pulsatingPaddlePosition,
       (mesh: THREE.Mesh): void => {
         this.guiControlledMeshes.push(mesh);
+
+        // Register mesh-specific uniforms for MeshUniformsManager
+        // The actual uniforms are defined and applied inside the PulsatingRoundedPaddle class
+        this.registerMeshUniforms(
+          mesh,
+          (pulsatingPaddle as PulsatingRoundedPaddle).meshSpecificUniforms
+        );
+
+        // Hide this mesh until we're ready to show it
+        mesh.visible = false;
+
+        // Now that both meshes are created, set up the GUI and activate the first mesh
+        this.setupMeshGUI();
       }
     );
   }
 
-  private setupShaderPlane(position: THREE.Vector3) {
-    // Set shader plane
+  private setupMeshGUI() {
+    // Setup the mesh selector in the GUI after all meshes are loaded
+    this._guimanager.setupMeshSelector();
 
-    const initialShaderPlaneMaterial = new PlaneMaterial(
-      vertexShader,
-      pulsatingRingFragmentShader,
-      {
-        uniforms: {
-          uGeometryCenter: position
-            .clone()
-            .add(new THREE.Vector3(0.0, 0.0, 0.0)),
-          uBarRingForegroundColor: new THREE.Color("#6A452F"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-          uBaseColor: new THREE.Color("#2F646A"),
-        },
-      }
-    );
-
-    this._customMaterials.push(initialShaderPlaneMaterial);
-
-    const shaderPlane = new ShaderPlane(
-      this._renderer,
-      this._scene,
-      initialShaderPlaneMaterial,
-      position
-    );
-
-    if (shaderPlane.plane) {
-      this.guiControlledMeshes.push(shaderPlane.plane);
+    // Set the first mesh as active if available
+    if (this.guiControlledMeshes.length > 0) {
+      this.setActiveMesh(this.guiControlledMeshes[0]);
     }
+  }
+
+  public updateSceneBackground(color: THREE.Color): void {
+    this._backgroundColor = color;
+    this._scene.background = this._backgroundColor;
   }
 
   private animate() {
@@ -277,5 +380,21 @@ export class ShaderLab {
 
   public set guimanager(v: GUIManager) {
     this._guimanager = v;
+  }
+
+  public get meshUniformsManager(): MeshUniformsManager {
+    return this._meshUniformsManager;
+  }
+
+  public set meshUniformsManager(v: MeshUniformsManager) {
+    this._meshUniformsManager = v;
+  }
+
+  public get activeMesh(): GUIControlledMesh | null {
+    return this._activeMesh;
+  }
+
+  public set activeMesh(v: GUIControlledMesh | null) {
+    this._activeMesh = v;
   }
 }
