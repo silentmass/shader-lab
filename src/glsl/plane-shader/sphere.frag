@@ -56,9 +56,47 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+vec3 calculateImpactOrigin() {
+    // Normalize uSpeed to ensure it's a unit vector in 2D
+    vec2 normalizedSpeed = length(uSpeed) > 0.0 ? normalize(uSpeed) : vec2(0.0, 0.0);
+    
+    // The impact origin is in the opposite direction of the speed
+    // For a sphere of radius 1, we need to map the 2D direction to a 3D point on the sphere surface
+    
+    // For the XY components, we negate the speed direction to get the impact point
+    vec3 impactOrigin = vec3(-normalizedSpeed.x, -normalizedSpeed.y, 0.0);
+    
+    // For a unit sphere, if the impact is exactly on the XY plane 
+    // (as your examples suggest), then we need the point to have length 1
+    // and be on the XY plane (z=0)
+    float xyLength = length(impactOrigin.xy);
+    
+    if (xyLength > 0.0) {
+        // Scale the XY components to ensure the point is on the unit circle in the XY plane
+        impactOrigin.x /= xyLength;
+        impactOrigin.y /= xyLength;
+    } else {
+        // If speed is zero, default to a point on the sphere
+        impactOrigin = vec3(1.0, 0.0, 0.0);
+    }
+    
+    return impactOrigin;
+}
+
 // Function to calculate wave effects
 vec3 calculateWaveEffects(float progress) {
-    vec3 toPosition = vPosition - uGeometryCenter;
+
+    // TODO
+    // Calculate impact origin from uSpeed
+    // Set wave initial starting position to bottom of the geometry
+    // Because we use THREE.js SphereGeometry, its origin is at the center
+
+    vec3 impactOrigin = calculateImpactOrigin();
+
+    // vec3 waveOrigin = uGeometryCenter - vec3(0.0, 0.5, 0.0);
+    vec3 waveOrigin = uGeometryCenter - impactOrigin * 0.5;
+
+    vec3 toPosition = vPosition - waveOrigin;
     vec3 direction = normalize(toPosition);
     float radius = length(toPosition);
 
@@ -81,17 +119,23 @@ vec3 calculateWaveEffects(float progress) {
     
     int elevationFolds = 4;
     float symmetricElevation = mod(elevationAngle, PI / float(elevationFolds));
-    
-    // Combined symmetric pattern
-    float symmetricPattern = normalizedSin(symmetricAzimuthal * 72.0) * normalizedSin(symmetricElevation * 72.0);
 
     // Slow wave
     
-    float slowWaveSpeed = 1.0;
+    float slowWaveSpeed = 3.0;
     float slowWavePeriod = 1.0/slowWaveSpeed;
-    float slowWaveCycle = (progress/slowWavePeriod) - floor(progress/slowWavePeriod);
+
+    // Show wave only once, even if progress is not completed
+
+    float slowWaveCycle;
+
+    if (slowWavePeriod > progress) {
+        slowWaveCycle = (progress/slowWavePeriod) - floor(progress/slowWavePeriod);
+    } else {
+        slowWaveCycle = scaledRadius;
+    }
     
-    float slowWave  = 0.1 * generalSkewNormal(scaledRadius, slowWaveCycle, 0.1, -5.0);
+    float slowWave = 0.1 * generalSkewNormal(scaledRadius, slowWaveCycle, 0.1, -5.0);
 
     // Sample noise curve from texture
     vec2 sphereUV = vec2(azimuthalAngle / (2.0 * PI), elevationAngle / PI);
@@ -101,17 +145,17 @@ vec3 calculateWaveEffects(float progress) {
 
     // Add pointlight effect
     float waveRadius = slowWaveCycle + noisyCurve;
-    vec3 waveDirection = normalize(vPosition - uGeometryCenter);
-    vec3 curvePoint = waveDirection * waveRadius + vec3(0.5);
+    vec3 curvePoint = toPosition * waveRadius + vec3(0.5);
     vec3 distToPoint = vPosition - curvePoint;
-    float pointLightDecayFactor = 10.0;
+    float pointLightDecayFactor = 20.0;
     float pointlightFalloff = 1.0 / (1.0 + pointLightDecayFactor * dot(distToPoint, distToPoint));
 
     // Restrict noise and pointlight effect on trailing part of the wave
     float waveDistance = abs(scaledRadius - slowWaveCycle);
     float wavePresenceMask = smoothstep(0.2, 0.0, waveDistance);
     float trailingDistance = scaledRadius - slowWaveCycle;
-    float trailingMask = smoothstep(0.0, -0.3, trailingDistance) * wavePresenceMask;
+    // Set edge1 to control noise doesn't go to black
+    float trailingMask = smoothstep(0.0, -1.0, trailingDistance) * wavePresenceMask;
 
     // Add gradient
     // Keep the wave shape clean but add noise to the color
@@ -119,28 +163,16 @@ vec3 calculateWaveEffects(float progress) {
     vec3 gradientColor = mix(uBaseColor, uBarRingBackgroundColor, slowWave) * colorNoise * trailingMask;
 
     // Combine the wave with pointlight and apply spherical symmetric pattern
-    float noiseIntensity = 10.0;
-    float combinedEffect = (noisyCurve * noiseIntensity + 0.5 * pointlightFalloff) * symmetricPattern;
+    float noiseIntensity = 20.0;
+    float combinedEffect = (noisyCurve * noiseIntensity + 0.5 * pointlightFalloff);
 
     vec3 slowWaveTrail = vec3(combinedEffect) * gradientColor;
 
     // Apply trailing effect to your slow wave
-    float slowWaveIntensity = 10.0;
+    float slowWaveIntensity = 20.0;
     vec3 slowWaveColor = slowWaveTrail * slowWaveIntensity;
 
-    // Fast wave
-    float fastWaveSpeed = 3.0;
-    float fastWavePeriod = 1.0/fastWaveSpeed;
-
-    float fastWaveCycle = (progress/fastWavePeriod) - floor(progress/fastWavePeriod);
-    float fastWave = 0.5 * generalSkewNormal(scaledRadius, fastWaveCycle, 0.01, -5.0);
-
-    vec3 fastWaveColor = uBarRingForegroundColor * fastWave;
-
-    float fastWaveActiveMask = step(0.0, slowWaveCycle) * step(slowWaveCycle, fastWavePeriod/slowWavePeriod);
-
-    // Return combined wave effects
-    return slowWaveColor + (fastWaveActiveMask * fastWaveColor);
+    return slowWaveColor;
 }
 
 // Function to calculate PBR lighting
