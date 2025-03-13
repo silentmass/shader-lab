@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { PlaneMaterial } from "../materials/PlaneMaterial";
 import { MeshSpecificUniforms } from "../MeshUniformsManager";
 
-export class ShaderPlane {
+export class Sphere {
   private _mesh: THREE.Mesh | null = null;
   private _renderer: THREE.WebGLRenderer;
   private _scene: THREE.Scene;
@@ -43,11 +43,11 @@ export class ShaderPlane {
 
   private initialize(): void {
     // Create your mesh geometry
-    const geometry = new THREE.PlaneGeometry(1, 1);
+    const geometry = new THREE.SphereGeometry(1);
 
     // Create the mesh with the provided material
     this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.name = "ShaderPlaneMesh";
+    this.mesh.name = "ShaderSphereMesh";
     this.mesh.position.copy(this.position);
 
     // Add the mesh to the scene

@@ -12,8 +12,10 @@ import vertexShader from "./glsl/plane-shader/main.vert";
 import stripesFragmentShader from "./glsl/plane-shader/stripes.frag";
 import circlesFragmentShader from "./glsl/plane-shader/concentricCircles.frag";
 import pulsatingRingFragmentShader from "./glsl/plane-shader/pulsatingRing.frag";
+import sphereFragmentShader from "./glsl/plane-shader/sphere.frag";
 import { ShaderPlane } from "./entities/ShaderPlane";
 import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
+import { Sphere } from "./entities/Sphere";
 
 interface CustomShaderMaterial extends THREE.RawShaderMaterial, PlaneMaterial {
   update: (params?: any) => { updatedUniforms: string[] };
@@ -237,37 +239,46 @@ export class ShaderLab {
   }
 
   private createGUIControlledMaterials() {
-    // Create plane materials
-    const pulsatingPaddlePosition = new THREE.Vector3(0, 0, 0);
-
     // Create materials with default uniforms
+    const sphereMaterial = new PlaneMaterial(
+      vertexShader,
+      sphereFragmentShader
+    );
     const pulsatingPaddleMaterial = new PlaneMaterial(
       vertexShader,
-      pulsatingRingFragmentShader,
-      {
-        uniforms: {
-          // Default uniforms - these will be immediately overridden in each mesh's constructor
-          uGeometryCenter: new THREE.Vector3(0, 0, 0),
-          uBarRingForegroundColor: new THREE.Color("#6A452F"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-          uBaseColor: new THREE.Color("#2F646A"),
-        },
-      }
+      pulsatingRingFragmentShader
     );
-
-    const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader, {
-      uniforms: {
-        uBarRingForegroundColor: new THREE.Color("black"),
-        uBarRingBackgroundColor: new THREE.Color("white"),
-      },
-    });
-
+    const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader);
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
+    this._guimanager.addPlaneMaterial(sphereMaterial, "sphere");
     this._guimanager.addPlaneMaterial(pulsatingPaddleMaterial, "paddle");
     this._guimanager.addPlaneMaterial(stripes, "stripes");
     this._guimanager.addPlaneMaterial(circles, "circles");
     this._guimanager.setupPlaneMaterialFolder();
+
+    const spherePosition = new THREE.Vector3(0, 0, 0);
+
+    new Sphere(
+      this._renderer,
+      this._scene,
+      pulsatingPaddleMaterial,
+      spherePosition,
+      (mesh: THREE.Mesh): void => {
+        this.guiControlledMeshes.push(mesh);
+
+        // Register mesh-specific uniforms for MeshUniformsManager
+        this.registerMeshUniforms(mesh, {
+          uGeometryCenter: spherePosition.clone(),
+          uBarRingForegroundColor: new THREE.Color("#6A452F"),
+          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+          uBaseColor: new THREE.Color("#2F646A"),
+        });
+
+        // Hide this mesh until we're ready to show it
+        mesh.visible = false;
+      }
+    );
 
     // Create the shader plane - it will now apply mesh-specific uniforms directly in its constructor
     const shaderPlaneUniforms: MeshSpecificUniforms = {
@@ -291,28 +302,37 @@ export class ShaderLab {
       shaderPlaneUniforms // Pass the uniforms here
     );
 
+    const pulsatingRoundedPaddlePosition = new THREE.Vector3(0, 0, 0);
+
+    const pulsatingRoundedPaddleUniforms: MeshSpecificUniforms = {
+      uGeometryCenter: pulsatingRoundedPaddlePosition
+        .clone()
+        .add(new THREE.Vector3(0.0, 0.5, 1.0)),
+      uBarRingForegroundColor: new THREE.Color("#6A452F"),
+      uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+      uBaseColor: new THREE.Color("#2F646A"),
+    };
+
     // Create the pulsating paddle - it will now apply mesh-specific uniforms directly in its constructor
-    const pulsatingPaddle = new PulsatingRoundedPaddle(
+    new PulsatingRoundedPaddle(
       this._renderer,
       this._scene,
       pulsatingPaddleMaterial,
-      pulsatingPaddlePosition,
+      pulsatingRoundedPaddlePosition,
       (mesh: THREE.Mesh): void => {
         this.guiControlledMeshes.push(mesh);
 
         // Register mesh-specific uniforms for MeshUniformsManager
         // The actual uniforms are defined and applied inside the PulsatingRoundedPaddle class
-        this.registerMeshUniforms(
-          mesh,
-          (pulsatingPaddle as PulsatingRoundedPaddle).meshSpecificUniforms
-        );
+        this.registerMeshUniforms(mesh, pulsatingRoundedPaddleUniforms);
 
         // Hide this mesh until we're ready to show it
         mesh.visible = false;
 
         // Now that both meshes are created, set up the GUI and activate the first mesh
         this.setupMeshGUI();
-      }
+      },
+      pulsatingRoundedPaddleUniforms
     );
   }
 

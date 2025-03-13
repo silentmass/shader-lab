@@ -17,7 +17,8 @@ export class PulsatingRoundedPaddle {
     scene: THREE.Scene,
     material: PlaneMaterial,
     position: THREE.Vector3,
-    onMeshCreated: ((mesh: THREE.Mesh) => void) | null = null
+    onMeshCreated: ((mesh: THREE.Mesh) => void) | null = null,
+    initialUniforms?: MeshSpecificUniforms // Add this parameter
   ) {
     this._renderer = renderer;
     this._scene = scene;
@@ -32,6 +33,7 @@ export class PulsatingRoundedPaddle {
       uBarRingForegroundColor: new THREE.Color("#6A452F"),
       uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
       uBaseColor: new THREE.Color("#2F646A"),
+      ...(initialUniforms || {}),
     };
 
     // Apply mesh-specific uniforms to the material right away
