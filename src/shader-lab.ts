@@ -281,7 +281,7 @@ export class ShaderLab {
           uGeometryCenter: spherePosition.clone(),
           uBarRingForegroundColor: new THREE.Color("#6A452F"),
           uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-          uBaseColor: new THREE.Color("#2F646A"),
+          uBaseColor: new THREE.Color("silver"),
         });
 
         // Hide this mesh until we're ready to show it
