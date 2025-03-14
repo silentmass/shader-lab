@@ -160,7 +160,7 @@ vec3 calculateWaveEffects(float progress) {
     // Add gradient
     // Keep the wave shape clean but add noise to the color
     float colorNoise = 1.0 + noiseAmount * (noise - 0.5);
-    vec3 gradientColor = mix(uBaseColor, uBarRingBackgroundColor, slowWave) * colorNoise * trailingMask;
+    vec3 gradientColor = mix(uBaseColor, uBarRingForegroundColor, slowWave) * colorNoise * trailingMask;
 
     // Combine the wave with pointlight and apply spherical symmetric pattern
     float noiseIntensity = 20.0;

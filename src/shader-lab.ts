@@ -298,8 +298,8 @@ export class ShaderLab {
         // Register mesh-specific uniforms for MeshUniformsManager
         this.registerMeshUniforms(mesh, {
           uGeometryCenter: spherePosition.clone(),
-          uBarRingForegroundColor: new THREE.Color("#6A452F"),
-          uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
+          uBarRingForegroundColor: new THREE.Color("#90BDC3"), // Wave color
+          uBarRingBackgroundColor: new THREE.Color("red"),
           uBaseColor: new THREE.Color("silver"),
         });
 
