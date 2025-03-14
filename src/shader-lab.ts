@@ -290,7 +290,7 @@ export class ShaderLab {
     new Sphere(
       this._renderer,
       this._scene,
-      pulsatingPaddleMaterial,
+      sphereMaterial,
       spherePosition,
       (mesh: THREE.Mesh): void => {
         this.guiControlledMeshes.push(mesh);
@@ -339,15 +339,15 @@ export class ShaderLab {
       uGeometryCenter: brickPosition
         .clone()
         .add(new THREE.Vector3(0.0, 0.5, 0.5)),
-      uBarRingForegroundColor: new THREE.Color("#6A452F"),
+      uBarRingForegroundColor: new THREE.Color("crimson"),
       uBarRingBackgroundColor: new THREE.Color("#90BDC3"),
-      uBaseColor: new THREE.Color("#2F646A"),
+      uBaseColor: new THREE.Color("firebrick"),
     };
 
     new Brick(
       this._renderer,
       this._scene,
-      pulsatingPaddleMaterial,
+      brickMaterial,
       brickPosition,
       (mesh: THREE.Mesh): void => {
         this.guiControlledMeshes.push(mesh);
