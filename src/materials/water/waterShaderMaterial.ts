@@ -150,7 +150,8 @@ export class WaterShaderMaterial
     };
     this.uniforms.activeLasers = { value: defaultLasers.length };
 
-    const poolHeight = 1.0;
+    // const poolHeight = 1.0;
+    const poolHeight = 0.1;
 
     // In waterShaderMaterial.ts, add new uniforms:
     this.uniforms.poolLights = {
