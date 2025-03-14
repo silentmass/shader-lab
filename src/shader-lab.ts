@@ -196,16 +196,26 @@ export class ShaderLab {
           this._guimanager.planeMaterial,
           mesh.uuid
         );
-        console.log(this._meshUniformsManager.getMeshUniforms(mesh.uuid));
+        console.log(
+          this._meshUniformsManager.getMeshUniforms(mesh.uuid)?.uBaseColor
+        );
 
         // TODO
         // Change GUIManager colors to uniform colors
 
-        // this.guimanager.baseColor =
-        //   `#${this._meshUniformsManager
-        //     .getMeshUniforms(mesh.uuid)
-        //     ?.uBaseColor?.clone()
-        //     .getHexString()}` || this.guimanager.baseColor.getHexString();
+        this.guimanager.setMaterialParameters({
+          baseColor:
+            this._meshUniformsManager.getMeshUniforms(mesh.uuid)?.uBaseColor ||
+            this.guimanager.baseColor,
+          barRingForegroundColor:
+            this._meshUniformsManager.getMeshUniforms(mesh.uuid)
+              ?.uBarRingForegroundColor ||
+            this.guimanager.barRingForegroundColor,
+          barRingBackgroundColor:
+            this._meshUniformsManager.getMeshUniforms(mesh.uuid)
+              ?.uBarRingBackgroundColor ||
+            this.guimanager.barRingBackgroundColor,
+        });
       }
     }
 

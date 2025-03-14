@@ -4,6 +4,21 @@ import { PlaneMaterial } from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { ShaderLab } from "./shader-lab";
 
+// Define an interface for material parameters
+export interface IMaterialParameters {
+  color?: string | THREE.Color;
+  baseColor?: string | THREE.Color;
+  barRingForegroundColor?: string | THREE.Color;
+  barRingBackgroundColor?: string | THREE.Color;
+  barRingOpacity?: number;
+  event?: number;
+  eventIntensity?: number;
+  barRingCount?: number;
+  barRingSpeedX?: number;
+  barRingSpeedY?: number;
+  barRingAngle?: number;
+}
+
 const DEFAULT_MATERIAL_SETTINGS = {
   color: new THREE.Color("pink"),
   baseColor: new THREE.Color("#2F646A"),
@@ -20,6 +35,7 @@ const DEFAULT_MATERIAL_SETTINGS = {
 
 export class GUIManager {
   private _gui: GUI;
+  private _controllers: Map<string, any> = new Map();
   private _parentRef: ShaderLab;
   private _renderer: WebGLRenderer;
 
@@ -57,6 +73,195 @@ export class GUIManager {
     this.planeControlsChanged = true;
 
     this.setupBackgroundFolder();
+  }
+
+  // Method to store a controller with a name
+  public registerController(name: string, controller: any): void {
+    this._controllers.set(name, controller);
+  }
+
+  // Method to get a controller by name
+  public getController(name: string): any {
+    return this._controllers.get(name);
+  }
+
+  // Method to update a controller value programmatically
+  public updateControllerValue(name: string, value: any): void {
+    const controller = this._controllers.get(name);
+    if (controller) {
+      controller.setValue(value);
+      // Optional: trigger onChange event if the controller has one
+      if (typeof controller.__onChange === "function") {
+        controller.__onChange(value);
+      }
+    }
+  }
+
+  // Method to update multiple controllers at once
+  public updateControllers(updates: Record<string, any>): void {
+    Object.entries(updates).forEach(([name, value]) => {
+      this.updateControllerValue(name, value);
+    });
+  }
+
+  /**
+   * Set material parameters programmatically
+   * @param params Material parameters to update
+   * @param updateGUI Whether to update the GUI controllers (default: true)
+   */
+  public setMaterialParameters(
+    params: IMaterialParameters,
+    updateGUI: boolean = true
+  ): void {
+    // Process color values - convert strings to THREE.Color if needed
+    if (params.color) {
+      this.color =
+        typeof params.color === "string"
+          ? new THREE.Color(params.color)
+          : params.color.clone();
+
+      if (updateGUI) {
+        this.updateControllerValue("color", this.color.getHexString());
+      }
+    }
+
+    if (params.baseColor) {
+      this.baseColor =
+        typeof params.baseColor === "string"
+          ? new THREE.Color(params.baseColor)
+          : params.baseColor.clone();
+
+      if (updateGUI) {
+        this.updateControllerValue("baseColor", this.baseColor.getHexString());
+      }
+    }
+
+    if (params.barRingForegroundColor) {
+      this.barRingForegroundColor =
+        typeof params.barRingForegroundColor === "string"
+          ? new THREE.Color(params.barRingForegroundColor)
+          : params.barRingForegroundColor.clone();
+
+      if (updateGUI) {
+        this.updateControllerValue(
+          "barRingForegroundColor",
+          this.barRingForegroundColor.getHexString()
+        );
+      }
+    }
+
+    if (params.barRingBackgroundColor) {
+      this.barRingBackgroundColor =
+        typeof params.barRingBackgroundColor === "string"
+          ? new THREE.Color(params.barRingBackgroundColor)
+          : params.barRingBackgroundColor.clone();
+
+      if (updateGUI) {
+        this.updateControllerValue(
+          "barRingBackgroundColor",
+          this.barRingBackgroundColor.getHexString()
+        );
+      }
+    }
+
+    // Handle numeric parameters
+    if (params.barRingOpacity !== undefined) {
+      this.barRingOpacity = params.barRingOpacity;
+      if (updateGUI) {
+        this.updateControllerValue("barRingOpacity", params.barRingOpacity);
+      }
+    }
+
+    if (params.barRingCount !== undefined) {
+      this.barRingCount = params.barRingCount;
+      if (updateGUI) {
+        this.updateControllerValue("barRingCount", params.barRingCount);
+      }
+    }
+
+    if (params.event !== undefined) {
+      this._mEvent = params.event;
+      if (updateGUI) {
+        this.updateControllerValue("event", params.event);
+      }
+    }
+
+    if (params.eventIntensity !== undefined) {
+      this.eventIntensity = params.eventIntensity;
+      if (updateGUI) {
+        this.updateControllerValue("eventIntensity", params.eventIntensity);
+      }
+    }
+
+    // Handle vector components
+    if (params.barRingSpeedX !== undefined) {
+      this.barRingSpeed.x = params.barRingSpeedX;
+      if (updateGUI) {
+        this.updateControllerValue("barRingSpeedX", params.barRingSpeedX);
+      }
+    }
+
+    if (params.barRingSpeedY !== undefined) {
+      this.barRingSpeed.y = params.barRingSpeedY;
+      if (updateGUI) {
+        this.updateControllerValue("barRingSpeedY", params.barRingSpeedY);
+      }
+    }
+
+    if (params.barRingAngle !== undefined) {
+      this.barRingAngle = params.barRingAngle;
+      if (updateGUI) {
+        this.updateControllerValue("barRingAngle", params.barRingAngle);
+      }
+    }
+
+    // Mark controls as changed to trigger a material update
+    this.planeControlsChanged = true;
+  }
+
+  /**
+   * Get current material parameters
+   * @returns Current material parameter values
+   */
+  public getMaterialParameters(): IMaterialParameters {
+    return {
+      color: this.color.clone(),
+      baseColor: this.baseColor.clone(),
+      barRingForegroundColor: this.barRingForegroundColor.clone(),
+      barRingBackgroundColor: this.barRingBackgroundColor.clone(),
+      barRingOpacity: this.barRingOpacity,
+      event: this._mEvent,
+      eventIntensity: this.eventIntensity,
+      barRingCount: this.barRingCount,
+      barRingSpeedX: this.barRingSpeed.x,
+      barRingSpeedY: this.barRingSpeed.y,
+      barRingAngle: this.barRingAngle,
+    };
+  }
+
+  /**
+   * Trigger a timed event programmatically
+   * @param duration Event duration (default: 2.0)
+   */
+  public triggerEvent(duration: number = 2.0): void {
+    this.triggerTimedEvent = duration;
+    this.planeControlsChanged = true;
+  }
+
+  /**
+   * Set the active material by name
+   * @param materialName Name of the material to activate
+   * @returns True if successful, false if material not found
+   */
+  public setActiveMaterial(materialName: string): boolean {
+    const material = this._planeMaterials.get(materialName);
+    if (material) {
+      this.planeMaterial = material;
+      this.updateControllerValue("material", materialName);
+      this.planeControlsChanged = true;
+      return true;
+    }
+    return false;
   }
 
   public setupMeshSelector(): void {
@@ -233,32 +438,32 @@ export class GUIManager {
     return this._mColor;
   }
 
-  public set color(v: string) {
-    this._mColor = new THREE.Color(v);
+  public set color(v: THREE.Color) {
+    this._mColor = v;
   }
 
   public get baseColor(): THREE.Color {
     return this._mBaseColor;
   }
 
-  public set baseColor(v: string) {
-    this._mBaseColor = new THREE.Color(v);
+  public set baseColor(v: THREE.Color) {
+    this._mBaseColor = v;
   }
 
   public get barRingForegroundColor(): THREE.Color {
     return this._mBarRingForegroundColor;
   }
 
-  public set barRingForegroundColor(v: string) {
-    this._mBarRingForegroundColor = new THREE.Color(v);
+  public set barRingForegroundColor(v: THREE.Color) {
+    this._mBarRingForegroundColor = v;
   }
 
   public get barRingBackgroundColor(): THREE.Color {
     return this._mBarRingBackgroundColor;
   }
 
-  public set barRingBackgroundColor(v: string) {
-    this._mBarRingBackgroundColor = new THREE.Color(v);
+  public set barRingBackgroundColor(v: THREE.Color) {
+    this._mBarRingBackgroundColor = v;
   }
 
   public get barRingOpacity(): number {
@@ -320,7 +525,6 @@ export class GUIManager {
   }
 
   public setupPlaneMaterialFolder(): void {
-    const folderPlaneMaterial = this._gui.addFolder("Plane Material");
     const thisRef = this;
 
     const [defaultMaterialName, defaultMaterial] = Array.from(
@@ -336,7 +540,7 @@ export class GUIManager {
         return thisRef.color.getHexString();
       },
       set color(hexString: string) {
-        thisRef.color = hexString;
+        thisRef.color = new THREE.Color(`#${hexString.replace("#", "")}`);
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
@@ -345,7 +549,7 @@ export class GUIManager {
         return thisRef.baseColor.getHexString();
       },
       set baseColor(hexString: string) {
-        thisRef.baseColor = hexString;
+        thisRef.baseColor = new THREE.Color(`#${hexString.replace("#", "")}`);
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
@@ -354,7 +558,9 @@ export class GUIManager {
         return thisRef.barRingForegroundColor.getHexString();
       },
       set barRingForegroundColor(hexString: string) {
-        thisRef.barRingForegroundColor = hexString;
+        thisRef.barRingForegroundColor = new THREE.Color(
+          `#${hexString.replace("#", "")}`
+        );
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
@@ -363,7 +569,9 @@ export class GUIManager {
         return thisRef.barRingBackgroundColor.getHexString();
       },
       set barRingBackgroundColor(hexString: string) {
-        thisRef.barRingBackgroundColor = hexString;
+        thisRef.barRingBackgroundColor = new THREE.Color(
+          `#${hexString.replace("#", "")}`
+        );
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
@@ -442,8 +650,9 @@ export class GUIManager {
       },
     };
 
-    // Add color controls with color pickers
-    folderPlaneMaterial
+    const folderPlaneMaterial = this._gui.addFolder("Plane Material");
+
+    const materialController = folderPlaneMaterial
       .add(
         planeMaterialProps,
         "material",
@@ -451,7 +660,6 @@ export class GUIManager {
       )
       .name("Material")
       .onChange((materialName) => {
-        console.log(materialName);
         const material = this._planeMaterials.get(materialName);
         if (material) {
           console.log(material);
@@ -460,56 +668,89 @@ export class GUIManager {
           thisRef.returnFocusToRenderer();
         }
       });
-    folderPlaneMaterial
+    this.registerController("material", materialController);
+
+    // Add color controls with color pickers
+
+    const colorController = folderPlaneMaterial
       .addColor(planeMaterialProps, "color")
       .name("Main Color");
-    folderPlaneMaterial
+    this.registerController("color", colorController);
+
+    const baseColorController = folderPlaneMaterial
       .addColor(planeMaterialProps, "baseColor")
       .name("Base Color");
-    folderPlaneMaterial
+    this.registerController("baseColor", baseColorController);
+
+    const barRingForegroundColorController = folderPlaneMaterial
       .addColor(planeMaterialProps, "barRingForegroundColor")
       .name("Ring Foreground");
-    folderPlaneMaterial
+    this.registerController(
+      "barRingForegroundColor",
+      barRingForegroundColorController
+    );
+
+    const barRingBackgroundColorController = folderPlaneMaterial
       .addColor(planeMaterialProps, "barRingBackgroundColor")
       .name("Ring Background");
+    this.registerController(
+      "barRingBackgroundColor",
+      barRingBackgroundColorController
+    );
 
     // Add numeric sliders
-    folderPlaneMaterial
+    const barRingOpacityController = folderPlaneMaterial
       .add(planeMaterialProps, "barRingOpacity", 0.0, 1.0)
       .name("Ring and Bar Opacity")
       .step(0.01);
-    folderPlaneMaterial
+    this.registerController("barRingOpacity", barRingOpacityController);
+
+    const eventController = folderPlaneMaterial
       .add(planeMaterialProps, "event", 0, 1)
       .name("Event")
       .step(1.0);
-    folderPlaneMaterial
+    this.registerController("event", eventController);
+
+    const eventIntensityController = folderPlaneMaterial
       .add(planeMaterialProps, "eventIntensity", 0, 1)
       .name("Event Intensity")
       .step(0.01);
-    folderPlaneMaterial
+    this.registerController("eventIntensity", eventIntensityController);
+
+    const barRingCountController = folderPlaneMaterial
       .add(planeMaterialProps, "barRingCount", 1, 100)
       .name("Bar/Ring Count")
       .step(1);
+    this.registerController("barRingCount", barRingCountController);
 
-    // // Add vector controls
+    // Add vector controls
     const speedFolder = folderPlaneMaterial.addFolder("Speed Vector");
-    speedFolder
+
+    const barRingSpeedXController = speedFolder
       .add(planeMaterialProps, "barRingSpeedX", -5, 5)
       .name("X")
       .step(0.01);
-    speedFolder
+    this.registerController("barRingSpeedX", barRingSpeedXController);
+
+    const barRingSpeedYController = speedFolder
       .add(planeMaterialProps, "barRingSpeedY", -5, 5)
       .name("Y")
       .step(0.01);
+    this.registerController("barRingSpeedY", barRingSpeedYController);
 
     // Add angle control
-    folderPlaneMaterial
+    const barRingAngleController = folderPlaneMaterial
       .add(planeMaterialProps, "barRingAngle", 0, 2)
       .name("Angle (× π)")
       .step(0.125);
+    this.registerController("barRingAngle", barRingAngleController);
 
     // Add action button
-    folderPlaneMaterial.add(planeMaterialProps, "Trigger Event");
+    const triggerEventController = folderPlaneMaterial.add(
+      planeMaterialProps,
+      "Trigger Event"
+    );
+    this.registerController("Trigger Event", triggerEventController);
 
     // Initially open the folder
     folderPlaneMaterial.open();
