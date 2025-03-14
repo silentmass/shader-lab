@@ -5,6 +5,7 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { ShaderLab } from "./ShaderLab";
 
 // Define an interface for material parameters
+// Just a no change comment
 export interface IMaterialParameters {
   color?: string | THREE.Color;
   baseColor?: string | THREE.Color;
