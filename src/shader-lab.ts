@@ -196,6 +196,16 @@ export class ShaderLab {
           this._guimanager.planeMaterial,
           mesh.uuid
         );
+        console.log(this._meshUniformsManager.getMeshUniforms(mesh.uuid));
+
+        // TODO
+        // Change GUIManager colors to uniform colors
+
+        // this.guimanager.baseColor =
+        //   `#${this._meshUniformsManager
+        //     .getMeshUniforms(mesh.uuid)
+        //     ?.uBaseColor?.clone()
+        //     .getHexString()}` || this.guimanager.baseColor.getHexString();
       }
     }
 
