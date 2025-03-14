@@ -50,15 +50,23 @@ export class WaterShaderMaterial
     const gameHeight = options.height || window.innerHeight;
 
     // Light direction
+    // const light = new THREE.Vector3(
+    //   // -0.7559289460184544,
+    //   // 0.0,
+    //   // 0.7559289460184544,
+    //   0.0,
+    //   0.9,
+    //   // -0.3779644730092272
+    //   0.0
+    // );
+
+    // In waterShaderMaterial.ts
+    // In your waterShaderMaterial.ts:
     const light = new THREE.Vector3(
-      // -0.7559289460184544,
-      // 0.0,
-      // 0.7559289460184544,
       0.0,
-      0.9,
-      // -0.3779644730092272
+      0.9, // Higher y value for more top-down lighting
       0.0
-    );
+    ).normalize();
 
     // Load textures
     const textureLoader = new THREE.TextureLoader();
@@ -99,6 +107,39 @@ export class WaterShaderMaterial
     this.uniforms.water = { value: null };
     this.uniforms.causticTex = { value: null };
     this.uniforms.underwater = { value: 0.0 };
+
+    // In waterShaderMaterial.ts, add new uniforms:
+    this.uniforms.laserOrigin = { value: new THREE.Vector3(1.0, 0.05, 0.0) }; // Right side of pool, near surface
+    this.uniforms.laserDirection = {
+      value: new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
+    }; // Pointing slightly downward
+    this.uniforms.laserColor = { value: new THREE.Vector3(1.0, 0.2, 0.1) }; // Reddish laser
+    this.uniforms.laserIntensity = { value: 2.0 }; // Intensity multiplier
+    this.uniforms.laserWidth = { value: 0.02 }; // Beam width
+
+    const poolHeight = 1.0;
+
+    // In waterShaderMaterial.ts, add new uniforms:
+    this.uniforms.poolLights = {
+      value: [
+        new THREE.Vector3(-0.5, -poolHeight, -0.5), // Bottom left
+        new THREE.Vector3(0.5, -poolHeight, -0.5), // Bottom right
+        new THREE.Vector3(-0.5, -poolHeight, 0.5), // Top left
+        new THREE.Vector3(0.5, -poolHeight, 0.5), // Top right
+      ],
+    };
+
+    this.uniforms.poolLightColors = {
+      value: [
+        new THREE.Vector3(0.0, 0.5, 1.0), // Blue
+        new THREE.Vector3(0.0, 1.0, 0.5), // Green-cyan
+        new THREE.Vector3(1.0, 0.5, 0.0), // Orange
+        new THREE.Vector3(0.8, 0.0, 0.8), // Purple
+      ],
+    };
+
+    this.uniforms.poolLightIntensity = { value: 1.5 };
+    this.uniforms.poolLightRadius = { value: 0.4 };
 
     // Create water simulation
     this._waterSimulation = new WaterSimulation();
@@ -228,6 +269,52 @@ export class WaterShaderMaterial
     // First call parent update method to handle standard PlaneMaterial uniforms
     const result = super.update(params);
 
+    // Handle water-specific parameters
+    if (params) {
+      // Update laser parameters
+      if (params.laserIntensity !== undefined) {
+        this.uniforms.laserIntensity.value = params.laserIntensity;
+        result.updatedUniforms.push("laserIntensity");
+      }
+
+      if (params.laserWidth !== undefined) {
+        this.uniforms.laserWidth.value = params.laserWidth;
+        result.updatedUniforms.push("laserWidth");
+      }
+
+      if (params.laserColor !== undefined) {
+        this.uniforms.laserColor.value = new THREE.Vector3(
+          params.laserColor.r,
+          params.laserColor.g,
+          params.laserColor.b
+        );
+        result.updatedUniforms.push("laserColor");
+      }
+
+      if (params.laserOrigin !== undefined) {
+        this.uniforms.laserOrigin.value = params.laserOrigin.clone();
+        result.updatedUniforms.push("laserOrigin");
+      }
+
+      if (params.laserDirection !== undefined) {
+        this.uniforms.laserDirection.value = params.laserDirection
+          .clone()
+          .normalize();
+        result.updatedUniforms.push("laserDirection");
+      }
+
+      // Update pool light parameters
+      if (params.poolLightIntensity !== undefined) {
+        this.uniforms.poolLightIntensity.value = params.poolLightIntensity;
+        result.updatedUniforms.push("poolLightIntensity");
+      }
+
+      if (params.poolLightRadius !== undefined) {
+        this.uniforms.poolLightRadius.value = params.poolLightRadius;
+        result.updatedUniforms.push("poolLightRadius");
+      }
+    }
+
     // Check if a timed event was triggered via the GUI
     if (params && params.triggerTimedEvent && params.triggerTimedEvent > 0) {
       // Create a splash pattern of drops when event is triggered
@@ -248,14 +335,14 @@ export class WaterShaderMaterial
       }
 
       // Add some random drops as well
-      for (let i = 0; i < 5; i++) {
-        const x = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
-        const y = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
-        const size = 0.02 + Math.random() * 0.02; // Random size between 0.02 and 0.04
-        const strength =
-          (Math.random() > 0.5 ? 1 : -1) * (0.01 + Math.random() * 0.02); // Random strength
-        this.addDrop(x, y, size, strength);
-      }
+      // for (let i = 0; i < 5; i++) {
+      //   const x = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
+      //   const y = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
+      //   const size = 0.02 + Math.random() * 0.02; // Random size between 0.02 and 0.04
+      //   const strength =
+      //     (Math.random() > 0.5 ? 1 : -1) * (0.01 + Math.random() * 0.02); // Random strength
+      //   this.addDrop(x, y, size, strength);
+      // }
     }
 
     // Then update water simulation

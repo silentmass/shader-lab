@@ -18,6 +18,20 @@ export interface IMaterialParameters {
   barRingSpeedX?: number;
   barRingSpeedY?: number;
   barRingAngle?: number;
+  // New laser parameters
+  laserIntensity?: number;
+  laserWidth?: number;
+  laserColor?: string | THREE.Color;
+  laserOriginX?: number;
+  laserOriginY?: number;
+  laserOriginZ?: number;
+  laserDirectionX?: number;
+  laserDirectionY?: number;
+  laserDirectionZ?: number;
+
+  // New pool light parameters
+  poolLightIntensity?: number;
+  poolLightRadius?: number;
 }
 
 const DEFAULT_MATERIAL_SETTINGS = {
@@ -66,6 +80,21 @@ export class GUIManager {
   private _mBarRingAngle: number = DEFAULT_MATERIAL_SETTINGS.barRingAngle;
   private _mTriggerTimedEvent: number =
     DEFAULT_MATERIAL_SETTINGS.triggerTimedEvent;
+
+  // For laser
+  private _mLaserIntensity: number = 2.0;
+  private _mLaserWidth: number = 0.02;
+  private _mLaserColor: THREE.Color = new THREE.Color(1.0, 0.2, 0.1);
+  private _mLaserOrigin: THREE.Vector3 = new THREE.Vector3(1.0, 0.05, 0.0);
+  private _mLaserDirection: THREE.Vector3 = new THREE.Vector3(
+    -1.0,
+    -0.1,
+    0.0
+  ).normalize();
+
+  // For pool lights
+  private _mPoolLightIntensity: number = 1.5;
+  private _mPoolLightRadius: number = 0.4;
 
   constructor(parentRef: any, renderer: WebGLRenderer) {
     this._gui = new GUI();
@@ -774,6 +803,248 @@ export class GUIManager {
     folderPlaneMaterial.open();
   }
 
+  public setupWaterControlsFolder(): void {
+    const folderWaterControls = this._gui.addFolder("Water Effects");
+    const thisRef = this;
+
+    // LASER CONTROLS
+    const laserFolder = folderWaterControls.addFolder("Laser Light");
+
+    const laserProps = {
+      get laserIntensity() {
+        return thisRef._mLaserIntensity;
+      },
+      set laserIntensity(v: number) {
+        thisRef._mLaserIntensity = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserWidth() {
+        return thisRef._mLaserWidth;
+      },
+      set laserWidth(v: number) {
+        thisRef._mLaserWidth = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserColor() {
+        return "#" + thisRef._mLaserColor.getHexString();
+      },
+      set laserColor(hexString: string) {
+        thisRef._mLaserColor = new THREE.Color(hexString);
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserOriginX() {
+        return thisRef._mLaserOrigin.x;
+      },
+      set laserOriginX(v: number) {
+        thisRef._mLaserOrigin.x = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserOriginY() {
+        return thisRef._mLaserOrigin.y;
+      },
+      set laserOriginY(v: number) {
+        thisRef._mLaserOrigin.y = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserOriginZ() {
+        return thisRef._mLaserOrigin.z;
+      },
+      set laserOriginZ(v: number) {
+        thisRef._mLaserOrigin.z = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserDirectionX() {
+        return thisRef._mLaserDirection.x;
+      },
+      set laserDirectionX(v: number) {
+        thisRef._mLaserDirection.x = v;
+        thisRef._mLaserDirection.normalize();
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserDirectionY() {
+        return thisRef._mLaserDirection.y;
+      },
+      set laserDirectionY(v: number) {
+        thisRef._mLaserDirection.y = v;
+        thisRef._mLaserDirection.normalize();
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get laserDirectionZ() {
+        return thisRef._mLaserDirection.z;
+      },
+      set laserDirectionZ(v: number) {
+        thisRef._mLaserDirection.z = v;
+        thisRef._mLaserDirection.normalize();
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+    };
+
+    // Add laser controls
+    const laserIntensityController = laserFolder
+      .add(laserProps, "laserIntensity", 0, 5)
+      .name("Intensity")
+      .step(0.1);
+    this.registerController("laserIntensity", laserIntensityController);
+
+    const laserWidthController = laserFolder
+      .add(laserProps, "laserWidth", 0.005, 0.1)
+      .name("Width")
+      .step(0.005);
+    this.registerController("laserWidth", laserWidthController);
+
+    const laserColorController = laserFolder
+      .addColor(laserProps, "laserColor")
+      .name("Color");
+    this.registerController("laserColor", laserColorController);
+
+    // Origin and direction controls
+    const laserOriginFolder = laserFolder.addFolder("Origin Position");
+
+    const laserOriginXController = laserOriginFolder
+      .add(laserProps, "laserOriginX", -1, 1)
+      .name("X")
+      .step(0.05);
+    this.registerController("laserOriginX", laserOriginXController);
+
+    const laserOriginYController = laserOriginFolder
+      .add(laserProps, "laserOriginY", -1, 1)
+      .name("Y")
+      .step(0.05);
+    this.registerController("laserOriginY", laserOriginYController);
+
+    const laserOriginZController = laserOriginFolder
+      .add(laserProps, "laserOriginZ", -1, 1)
+      .name("Z")
+      .step(0.05);
+    this.registerController("laserOriginZ", laserOriginZController);
+
+    const laserDirectionFolder = laserFolder.addFolder("Direction");
+
+    const laserDirectionXController = laserDirectionFolder
+      .add(laserProps, "laserDirectionX", -1, 1)
+      .name("X")
+      .step(0.1);
+    this.registerController("laserDirectionX", laserDirectionXController);
+
+    const laserDirectionYController = laserDirectionFolder
+      .add(laserProps, "laserDirectionY", -1, 1)
+      .name("Y")
+      .step(0.1);
+    this.registerController("laserDirectionY", laserDirectionYController);
+
+    const laserDirectionZController = laserDirectionFolder
+      .add(laserProps, "laserDirectionZ", -1, 1)
+      .name("Z")
+      .step(0.1);
+    this.registerController("laserDirectionZ", laserDirectionZController);
+
+    // POOL LIGHT CONTROLS
+    const poolLightsFolder = folderWaterControls.addFolder("Pool Lights");
+
+    const poolLightProps = {
+      get poolLightIntensity() {
+        return thisRef._mPoolLightIntensity;
+      },
+      set poolLightIntensity(v: number) {
+        thisRef._mPoolLightIntensity = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get poolLightRadius() {
+        return thisRef._mPoolLightRadius;
+      },
+      set poolLightRadius(v: number) {
+        thisRef._mPoolLightRadius = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+    };
+
+    const poolLightIntensityController = poolLightsFolder
+      .add(poolLightProps, "poolLightIntensity", 0, 5)
+      .name("Intensity")
+      .step(0.1);
+    this.registerController("poolLightIntensity", poolLightIntensityController);
+
+    const poolLightRadiusController = poolLightsFolder
+      .add(poolLightProps, "poolLightRadius", 0.1, 1.0)
+      .name("Radius")
+      .step(0.05);
+    this.registerController("poolLightRadius", poolLightRadiusController);
+
+    // Open folders
+    folderWaterControls.open();
+  }
+
+  // Laser getters/setters
+  public get laserIntensity(): number {
+    return this._mLaserIntensity;
+  }
+  public set laserIntensity(v: number) {
+    this._mLaserIntensity = v;
+  }
+
+  public get laserWidth(): number {
+    return this._mLaserWidth;
+  }
+  public set laserWidth(v: number) {
+    this._mLaserWidth = v;
+  }
+
+  public get laserColor(): THREE.Color {
+    return this._mLaserColor;
+  }
+  public set laserColor(v: THREE.Color) {
+    this._mLaserColor = v;
+  }
+
+  public get laserOrigin(): THREE.Vector3 {
+    return this._mLaserOrigin;
+  }
+  public set laserOrigin(v: THREE.Vector3) {
+    this._mLaserOrigin = v;
+  }
+
+  public get laserDirection(): THREE.Vector3 {
+    return this._mLaserDirection;
+  }
+  public set laserDirection(v: THREE.Vector3) {
+    this._mLaserDirection = v;
+  }
+
+  // Pool light getters/setters
+  public get poolLightIntensity(): number {
+    return this._mPoolLightIntensity;
+  }
+  public set poolLightIntensity(v: number) {
+    this._mPoolLightIntensity = v;
+  }
+
+  public get poolLightRadius(): number {
+    return this._mPoolLightRadius;
+  }
+  public set poolLightRadius(v: number) {
+    this._mPoolLightRadius = v;
+  }
+
   public get planeMaterial(): PlaneMaterial | null {
     return this._planeMaterial;
   }
@@ -816,6 +1087,16 @@ export class GUIManager {
       eventIntensity: this.eventIntensity,
       speed: this.barRingSpeed,
       angle: this.barRingAngle * Math.PI,
+
+      // New water-specific parameters
+      laserIntensity: this.laserIntensity,
+      laserWidth: this.laserWidth,
+      laserColor: this.laserColor,
+      laserOrigin: this.laserOrigin,
+      laserDirection: this.laserDirection,
+      poolLightIntensity: this.poolLightIntensity,
+      poolLightRadius: this.poolLightRadius,
+
       triggerTimedEvent: this.triggerTimedEvent,
     });
 

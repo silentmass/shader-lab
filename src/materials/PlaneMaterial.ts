@@ -462,6 +462,14 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     cameraPosition?: THREE.Vector3;
     lightPosition?: THREE.Vector3;
     lightColor?: THREE.Color;
+    // Add new water-specific parameters
+    laserIntensity?: number;
+    laserWidth?: number;
+    laserColor?: THREE.Color;
+    laserOrigin?: THREE.Vector3;
+    laserDirection?: THREE.Vector3;
+    poolLightIntensity?: number;
+    poolLightRadius?: number;
   }): { updatedUniforms: string[] } {
     const updatedUniforms: string[] = [];
 
