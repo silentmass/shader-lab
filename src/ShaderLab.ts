@@ -18,6 +18,7 @@ import { ShaderPlane } from "./entities/ShaderPlane";
 import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
 import { Sphere } from "./entities/Sphere";
 import { Brick } from "./entities/Brick";
+import { WaterShaderMaterial } from "./materials/water/waterShaderMaterial";
 
 interface CustomShaderMaterial extends THREE.RawShaderMaterial, PlaneMaterial {
   update: (params?: any) => { updatedUniforms: string[] };
@@ -261,11 +262,18 @@ export class ShaderLab {
 
   private createGUIControlledMaterials() {
     // Define default material name - we'll use this after creating all meshes
-    const defaultMaterialName = "brick";
-    const defaultMeshName = "BrickMesh";
+    const defaultMaterialName = "water";
+    const defaultMeshName = "WaterPlaneMesh";
+
+    const waterPlaneGeometry = new THREE.PlaneGeometry(2, 2, 100, 100);
 
     // Create materials
 
+    const waterMaterial = new WaterShaderMaterial(
+      this._renderer,
+      this._camera,
+      { geometry: waterPlaneGeometry }
+    );
     const sphereMaterial = new PlaneMaterial(
       vertexShader,
       sphereFragmentShader
@@ -278,6 +286,7 @@ export class ShaderLab {
     const stripes = new PlaneMaterial(vertexShader, stripesFragmentShader);
     const circles = new PlaneMaterial(vertexShader, circlesFragmentShader);
 
+    this._guimanager.addPlaneMaterial(waterMaterial, "water");
     this._guimanager.addPlaneMaterial(sphereMaterial, "sphere");
     this._guimanager.addPlaneMaterial(brickMaterial, "brick");
     this._guimanager.addPlaneMaterial(pulsatingPaddleMaterial, "paddle");
@@ -322,7 +331,7 @@ export class ShaderLab {
       uBaseColor: new THREE.Color("#2F646A"),
     };
 
-    new ShaderPlane(
+    const plane = new ShaderPlane(
       this._renderer,
       this._scene,
       pulsatingPaddleMaterial,
@@ -335,6 +344,37 @@ export class ShaderLab {
       },
       shaderPlaneUniforms // Pass the uniforms here
     );
+
+    // Water plane
+
+    // Create a dedicated water plane with correct orientation
+    const waterPlanePosition = new THREE.Vector3(0, 0, 0);
+
+    // Apply correct rotation to make it flat on XZ plane
+    const waterPlaneMesh = new THREE.Mesh(waterPlaneGeometry, waterMaterial);
+    waterPlaneMesh.name = "WaterPlaneMesh";
+    waterPlaneMesh.position.copy(waterPlanePosition);
+    // Rotate to lie flat on XZ plane (around X axis by 90 degrees)
+    waterPlaneMesh.rotation.x = -Math.PI / 2;
+    waterPlaneMesh.rotation.z = Math.PI;
+    this._scene.add(waterPlaneMesh);
+
+    // Set up water-specific uniforms
+    const waterPlaneUniforms: MeshSpecificUniforms = {
+      uGeometryCenter: waterPlanePosition.clone(),
+      uBarRingForegroundColor: new THREE.Color("#33ccff"),
+      uBarRingBackgroundColor: new THREE.Color("#006699"),
+      uBaseColor: new THREE.Color("#0099cc"),
+    };
+
+    // Add to GUI-controlled meshes
+    this.guiControlledMeshes.push(waterPlaneMesh);
+
+    // Register mesh-specific uniforms
+    this.registerMeshUniforms(waterPlaneMesh, waterPlaneUniforms);
+
+    // Make this mesh initially visible if it's the default
+    waterPlaneMesh.visible = false;
 
     // Brick
 
