@@ -153,6 +153,13 @@ export class ShaderLab {
         meshPosition.z + 0.7
       );
       this._camera.lookAt(meshPosition);
+    } else if (mesh.name === "WaterPlaneMesh") {
+      this._camera.position.set(
+        meshPosition.x,
+        meshPosition.y,
+        meshPosition.z + 0.7 * 2.0
+      );
+      this._camera.lookAt(meshPosition);
     } else {
       // For other meshes, use a default viewing angle
       this._camera.position.set(
