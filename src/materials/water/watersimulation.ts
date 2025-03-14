@@ -1,10 +1,11 @@
 // materials/water/waterSimulation.ts
 import * as THREE from "three";
 
-import vertexShader from "../../glsl/water/simulation/vertex_glsl3.glsl";
-import dropFragmentShader from "../../glsl/water/simulation/drop_fragment_glsl3.glsl";
-import normalFragmentShader from "../../glsl/water/simulation/normal_fragment_glsl3.glsl";
-import updateFragmentShader from "../../glsl/water/simulation/update_fragment_glsl3.glsl";
+import vertexShader from "../../glsl/water/simulation/vertex.glsl";
+import dropFragmentShader from "../../glsl/water/simulation/drop_fragment.glsl";
+import normalFragmentShader from "../../glsl/water/simulation/normal_fragment.glsl";
+import updateFragmentShader from "../../glsl/water/simulation/update_fragment.glsl";
+import { stripVersion } from "../MaterialUtils";
 
 export class WaterSimulation {
   private _camera: THREE.OrthographicCamera;
@@ -37,8 +38,8 @@ export class WaterSimulation {
         strength: { value: 0.0 },
         mainTexture: { value: null },
       },
-      vertexShader: vertexShader,
-      fragmentShader: dropFragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(dropFragmentShader),
       glslVersion: THREE.GLSL3,
     });
 
@@ -47,8 +48,8 @@ export class WaterSimulation {
       uniforms: {
         mainTexture: { value: null }, // Changed from 'water' to 'mainTexture'
       },
-      vertexShader: vertexShader,
-      fragmentShader: normalFragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(normalFragmentShader),
       glslVersion: THREE.GLSL3,
     });
 
@@ -57,8 +58,8 @@ export class WaterSimulation {
       uniforms: {
         mainTexture: { value: null },
       },
-      vertexShader: vertexShader,
-      fragmentShader: updateFragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(updateFragmentShader),
       glslVersion: THREE.GLSL3,
     });
 

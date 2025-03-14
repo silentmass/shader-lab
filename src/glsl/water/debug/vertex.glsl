@@ -1,11 +1,16 @@
-// glsl/water/debug/vertex.glsl
-uniform sampler2D texture;
-attribute vec3 position;
-varying vec2 coord;
+#version 300 es
+precision highp float;
+precision highp int;
 
+uniform sampler2D mainTexture;
+
+// Input attributes
+in vec3 position;
+
+// Output to fragment shader
+out vec2 vCoord;
 
 void main() {
-  coord = position.xy + 0.5;
-
-  gl_Position = vec4(position.xy * 2., 0., 1.);
+  vCoord = position.xy + 0.5;
+  gl_Position = vec4(position.xy * 2.0, 0.0, 1.0);
 }

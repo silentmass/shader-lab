@@ -1,7 +1,8 @@
 // materials/water/debug.ts
 import * as THREE from "three";
-import vertexShader from "../../glsl/water/debug/vertex_glsl3.glsl";
-import fragmentShader from "../../glsl/water/debug/fragment_glsl3.glsl";
+import vertexShader from "../../glsl/water/debug/vertex.glsl";
+import fragmentShader from "../../glsl/water/debug/fragment.glsl";
+import { stripVersion } from "../MaterialUtils";
 
 export class Debug {
   private _camera: THREE.OrthographicCamera;
@@ -21,8 +22,8 @@ export class Debug {
       uniforms: {
         mainTexture: { value: null },
       },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3, // Explicitly use GLSL3 for WebGL2
     });
 

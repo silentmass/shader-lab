@@ -6,12 +6,13 @@ import {
   type GameEventData,
   type IMaterialGameEvents,
 } from "../IMaterialGameEvents.ts";
-import waterWaterVertexShader from "../../glsl/water/water/vertex_glsl3.glsl";
-import waterWaterFragmentShader from "../../glsl/water/water/fragment_glsl3.glsl";
+import waterWaterVertexShader from "../../glsl/water/water/vertex.glsl";
+import waterWaterFragmentShader from "../../glsl/water/water/fragment.glsl";
 import { Caustics } from "./caustics.ts";
 import { WaterSimulation } from "./watersimulation.ts";
 import { Pool } from "./pool.ts";
 import { PlaneMaterial } from "../PlaneMaterial";
+import { stripVersion } from "../MaterialUtils.ts";
 
 /**
  * WaterShaderMaterial - A THREE.js material that simulates dynamic water
@@ -79,7 +80,10 @@ export class WaterShaderMaterial
     ]);
 
     // Initialize PlaneMaterial with our water shaders
-    super(waterWaterVertexShader, waterWaterFragmentShader);
+    super(
+      stripVersion(waterWaterVertexShader),
+      stripVersion(waterWaterFragmentShader)
+    );
 
     // Override some material properties
     this.side = THREE.BackSide;

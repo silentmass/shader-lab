@@ -1,7 +1,8 @@
 // materials/water/caustics.ts
 import * as THREE from "three";
-import vertexShader from "../../glsl/water/caustics/vertex_glsl3.glsl";
-import fragmentShader from "../../glsl/water/caustics/fragment_glsl3.glsl";
+import vertexShader from "../../glsl/water/caustics/vertex.glsl";
+import fragmentShader from "../../glsl/water/caustics/fragment.glsl";
+import { stripVersion } from "../MaterialUtils";
 
 export class Caustics {
   private _camera: THREE.OrthographicCamera;
@@ -22,8 +23,8 @@ export class Caustics {
         light: { value: light },
         water: { value: null },
       },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3,
     });
 

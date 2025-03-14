@@ -1,17 +1,23 @@
-// glsl/water/pool/vertex.glsl
-#include <utils>
+#version 300 es
+precision highp float;
+precision highp int;
 
+// Constants
+const float poolHeight = 1.0;
+
+// Uniforms
 uniform mat4 projectionMatrix;
 uniform mat4 modelViewMatrix;
 
-attribute vec3 position;
+// Input attributes
+in vec3 position;
 
-varying vec3 pos;
-
+// Output to fragment shader
+out vec3 vPos;
 
 void main() {
-  pos = position.xyz;
-  pos.y = ((1.0 - pos.y) * (7.0 / 12.0) - 1.0) * poolHeight;
+  vPos = position.xyz;
+  vPos.y = ((1.0 - vPos.y) * (7.0 / 12.0) - 1.0) * poolHeight;
 
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(vPos, 1.0);
 }

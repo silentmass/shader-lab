@@ -1,7 +1,8 @@
 // materials/water/pool.ts
 import * as THREE from "three";
-import vertexShader from "../../glsl/water/pool/vertex_glsl3.glsl";
-import fragmentShader from "../../glsl/water/pool/fragment_glsl3.glsl";
+import vertexShader from "../../glsl/water/pool/vertex.glsl";
+import fragmentShader from "../../glsl/water/pool/fragment.glsl";
+import { stripVersion } from "../MaterialUtils";
 
 export class Pool {
   private _geometry: THREE.BufferGeometry;
@@ -33,8 +34,8 @@ export class Pool {
         water: { value: null },
         causticTex: { value: null },
       },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3,
     });
 

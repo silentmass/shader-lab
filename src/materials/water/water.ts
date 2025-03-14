@@ -1,7 +1,8 @@
 import * as THREE from "three";
 
-import vertexShader from "../../glsl/water/water/vertex_glsl3.glsl";
-import fragmentShader from "../../glsl/water/water/fragment_glsl3.glsl";
+import vertexShader from "../../glsl/water/water/vertex.glsl";
+import fragmentShader from "../../glsl/water/water/fragment.glsl";
+import { stripVersion } from "../MaterialUtils";
 
 export class Water {
   private renderer: THREE.WebGLRenderer;
@@ -44,8 +45,8 @@ export class Water {
         underwater: { value: 0.0 },
         uTime: { value: 0.0 },
       },
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
+      vertexShader: stripVersion(vertexShader),
+      fragmentShader: stripVersion(fragmentShader),
       glslVersion: THREE.GLSL3,
       side: side,
     });
