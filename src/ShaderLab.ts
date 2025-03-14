@@ -40,6 +40,8 @@ export class ShaderLab {
   private _guiControlledMeshes: GUIControlledMesh[] = [];
   private _backgroundColor: THREE.Color = new THREE.Color(0x000000);
 
+  private _axesHelper: THREE.AxesHelper;
+
   private _meshUniformsManager: MeshUniformsManager;
 
   private _shaderPlanePosition: THREE.Vector3;
@@ -109,8 +111,8 @@ export class ShaderLab {
     this._controls = new OrbitControls(this._camera, this._renderer.domElement);
     this._controls.update();
 
-    // const axesHelper = new THREE.AxesHelper(5);
-    // this._scene.add(axesHelper);
+    this._axesHelper = new THREE.AxesHelper(5);
+    this._scene.add(this._axesHelper);
 
     this._guimanager = new GUIManager(this, this._renderer);
     this._statsManager = new StatsManager();
@@ -153,6 +155,7 @@ export class ShaderLab {
         meshPosition.z + 0.7
       );
       this._camera.lookAt(meshPosition);
+      this._axesHelper.visible = true;
     } else if (mesh.name === "WaterPlaneMesh") {
       this._camera.position.set(
         meshPosition.x,
@@ -160,6 +163,7 @@ export class ShaderLab {
         meshPosition.z + 0.7 * 2.0
       );
       this._camera.lookAt(meshPosition);
+      this._axesHelper.visible = false;
     } else {
       // For other meshes, use a default viewing angle
       this._camera.position.set(
@@ -168,6 +172,7 @@ export class ShaderLab {
         meshPosition.z + 3
       );
       this._camera.lookAt(meshPosition);
+      this._axesHelper.visible = true;
     }
 
     // Update the controls target to match the mesh position
