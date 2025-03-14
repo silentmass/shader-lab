@@ -200,8 +200,7 @@ export class ShaderLab {
           this._meshUniformsManager.getMeshUniforms(mesh.uuid)?.uBaseColor
         );
 
-        // TODO
-        // Change GUIManager colors to uniform colors
+        // Update GUIManager controllers to initial uniforms when changing mesh
 
         this.guimanager.setMaterialParameters({
           baseColor:
