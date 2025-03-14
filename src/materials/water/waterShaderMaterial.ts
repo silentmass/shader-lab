@@ -89,6 +89,30 @@ export class WaterShaderMaterial
       stripVersion(waterWaterFragmentShader)
     );
 
+    const defaultLasers = [
+      {
+        origin: new THREE.Vector3(1.0, 0.1, 0.0),
+        direction: new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
+        color: new THREE.Vector3(1.0, 0.2, 0.1), // Red
+        intensity: 2.0,
+        width: 0.02,
+      },
+      {
+        origin: new THREE.Vector3(-1.0, 0.1, 0.0),
+        direction: new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
+        color: new THREE.Vector3(0.1, 0.2, 1.0), // Blue
+        intensity: 1.8,
+        width: 0.015,
+      },
+      {
+        origin: new THREE.Vector3(0.0, 0.1, 1.0),
+        direction: new THREE.Vector3(0.0, -0.1, -1.0).normalize(),
+        color: new THREE.Vector3(0.1, 1.0, 0.2), // Green
+        intensity: 1.5,
+        width: 0.018,
+      },
+    ];
+
     // Override some material properties
     this.side = THREE.BackSide;
 
@@ -109,13 +133,22 @@ export class WaterShaderMaterial
     this.uniforms.underwater = { value: 0.0 };
 
     // In waterShaderMaterial.ts, add new uniforms:
-    this.uniforms.laserOrigin = { value: new THREE.Vector3(1.0, 0.05, 0.0) }; // Right side of pool, near surface
-    this.uniforms.laserDirection = {
-      value: new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
-    }; // Pointing slightly downward
-    this.uniforms.laserColor = { value: new THREE.Vector3(1.0, 0.2, 0.1) }; // Reddish laser
-    this.uniforms.laserIntensity = { value: 2.0 }; // Intensity multiplier
-    this.uniforms.laserWidth = { value: 0.02 }; // Beam width
+    this.uniforms.laserOrigins = {
+      value: defaultLasers.map((laser) => laser.origin),
+    };
+    this.uniforms.laserDirections = {
+      value: defaultLasers.map((laser) => laser.direction),
+    };
+    this.uniforms.laserColors = {
+      value: defaultLasers.map((laser) => laser.color),
+    };
+    this.uniforms.laserIntensities = {
+      value: defaultLasers.map((laser) => laser.intensity),
+    };
+    this.uniforms.laserWidths = {
+      value: defaultLasers.map((laser) => laser.width),
+    };
+    this.uniforms.activeLasers = { value: defaultLasers.length };
 
     const poolHeight = 1.0;
 
@@ -271,39 +304,45 @@ export class WaterShaderMaterial
 
     // Handle water-specific parameters
     if (params) {
-      // Update laser parameters
-      if (params.laserIntensity !== undefined) {
-        this.uniforms.laserIntensity.value = params.laserIntensity;
-        result.updatedUniforms.push("laserIntensity");
+      // Update multiple laser parameters
+      if (params.laserIntensities !== undefined) {
+        this.uniforms.laserIntensities.value = params.laserIntensities;
+        result.updatedUniforms.push("laserIntensities");
       }
 
-      if (params.laserWidth !== undefined) {
-        this.uniforms.laserWidth.value = params.laserWidth;
-        result.updatedUniforms.push("laserWidth");
+      if (params.laserWidths !== undefined) {
+        this.uniforms.laserWidths.value = params.laserWidths;
+        result.updatedUniforms.push("laserWidths");
       }
 
-      if (params.laserColor !== undefined) {
-        this.uniforms.laserColor.value = new THREE.Vector3(
-          params.laserColor.r,
-          params.laserColor.g,
-          params.laserColor.b
+      if (params.laserColors !== undefined) {
+        // Convert from THREE.Color array to Vector3 array
+        this.uniforms.laserColors.value = params.laserColors.map(
+          (color: THREE.Color) => new THREE.Vector3(color.r, color.g, color.b)
         );
-        result.updatedUniforms.push("laserColor");
+        result.updatedUniforms.push("laserColors");
       }
 
-      if (params.laserOrigin !== undefined) {
-        this.uniforms.laserOrigin.value = params.laserOrigin.clone();
-        result.updatedUniforms.push("laserOrigin");
+      if (params.laserOrigins !== undefined) {
+        this.uniforms.laserOrigins.value = params.laserOrigins.map(
+          (origin: THREE.Vector3) => origin.clone()
+        );
+        result.updatedUniforms.push("laserOrigins");
       }
 
-      if (params.laserDirection !== undefined) {
-        this.uniforms.laserDirection.value = params.laserDirection
-          .clone()
-          .normalize();
-        result.updatedUniforms.push("laserDirection");
+      if (params.laserDirections !== undefined) {
+        this.uniforms.laserDirections.value = params.laserDirections.map(
+          (dir: THREE.Vector3) => dir.clone().normalize()
+        );
+        result.updatedUniforms.push("laserDirections");
       }
 
-      // Update pool light parameters
+      if (params.activeLasers !== undefined) {
+        this.uniforms.activeLasers.value = params.activeLasers;
+        result.updatedUniforms.push("activeLasers");
+      }
+
+      // Pool light parameters remain the same
       if (params.poolLightIntensity !== undefined) {
         this.uniforms.poolLightIntensity.value = params.poolLightIntensity;
         result.updatedUniforms.push("poolLightIntensity");

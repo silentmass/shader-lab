@@ -109,8 +109,8 @@ export class ShaderLab {
     this._controls = new OrbitControls(this._camera, this._renderer.domElement);
     this._controls.update();
 
-    const axesHelper = new THREE.AxesHelper(5);
-    this._scene.add(axesHelper);
+    // const axesHelper = new THREE.AxesHelper(5);
+    // this._scene.add(axesHelper);
 
     this._guimanager = new GUIManager(this, this._renderer);
     this._statsManager = new StatsManager();

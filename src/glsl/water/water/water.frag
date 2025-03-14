@@ -31,11 +31,14 @@ uniform vec3 uCameraPosition;
 uniform vec3 uLightPosition;
 uniform vec3 uLightColor;
 
-uniform vec3 laserOrigin;      // Origin point of laser
-uniform vec3 laserDirection;   // Direction of laser beam
-uniform vec3 laserColor;       // Color of laser
-uniform float laserIntensity;  // Intensity of laser
-uniform float laserWidth;      // Width of the laser beam
+#define MAX_LASERS 3  // Define the maximum number of lasers
+
+uniform vec3 laserOrigins[MAX_LASERS];      // Origin points of lasers
+uniform vec3 laserDirections[MAX_LASERS];   // Directions of laser beams
+uniform vec3 laserColors[MAX_LASERS];       // Colors of lasers
+uniform float laserIntensities[MAX_LASERS]; // Intensities of lasers
+uniform float laserWidths[MAX_LASERS];      // Widths of the laser beams
+uniform int activeLasers;                   // Number of active lasers
 
 uniform vec3 poolLights[4];         // Positions of pool lights
 uniform vec3 poolLightColors[4];    // Colors of pool lights
@@ -66,23 +69,31 @@ vec3 calculatePoolLights(vec3 point) {
 }
 
 float calculateLaserContribution(vec3 point) {
-    // Vector from laser origin to current point
-    vec3 toPoint = point - laserOrigin;
-    
-    // Calculate closest point on laser ray to current point
-    float t = dot(toPoint, laserDirection);
-    vec3 closestPoint = laserOrigin + t * laserDirection;
-    
-    // Distance from point to laser beam
-    float distance = length(point - closestPoint);
-    
-    // Attenuate based on distance from laser beam
-    float attenuation = exp(-distance * distance / (laserWidth * laserWidth));
-    
-    // Additional attenuation through water
-    float waterAttenuation = exp(-t * 0.5);
-    
-    return attenuation * waterAttenuation * laserIntensity;
+  float totalContribution = 0.0;
+  
+  for(int i = 0; i < MAX_LASERS; i++) {
+      if(i >= activeLasers) break;
+      
+      vec3 toPoint = point - laserOrigins[i];
+      float t = dot(toPoint, laserDirections[i]);
+      vec3 closestPoint = laserOrigins[i] + t * laserDirections[i];
+      float distance = length(point - closestPoint);
+      
+      // Increase the contribution in elevated water areas
+      float elevationBoost = 1.0;
+      vec4 waterInfo = texture(water, point.xz * 0.5 + 0.5);
+      if (point.y < waterInfo.r) {
+          // If we're in a wave peak, boost the visibility
+          elevationBoost = 2.0;
+      }
+      
+      float attenuation = exp(-distance * distance / (laserWidths[i] * laserWidths[i]));
+      float waterAttenuation = exp(-t * 0.3); // Reduced attenuation through water
+      
+      totalContribution += elevationBoost * attenuation * waterAttenuation * laserIntensities[i];
+  }
+  
+  return totalContribution;
 }
 
 float metalNoise(vec3 point) {
@@ -176,12 +187,55 @@ vec3 getSurfaceRayColor(vec3 origin, vec3 ray, vec3 waterColor) {
     vec2 t = intersectCube(origin, ray, vec3(-1.0, -poolHeight, -1.0), vec3(1.0, 2.0, 1.0));
     vec3 hitPoint = origin + ray * t.y;
     
-    // First get normal wall color (which includes pool lights)
+    // Get normal wall color first (which includes pool lights)
     color = getWallColor(hitPoint);
     
-    // Then add laser contribution
-    float laserContrib = calculateLaserContribution(hitPoint);
-    color += laserColor * laserContrib;
+    // Mix laser colors based on their contributions
+    vec3 combinedLaserColor = vec3(0.0);
+    for(int i = 0; i < MAX_LASERS; i++) {
+        if(i >= activeLasers) break;
+        
+        // Vector from laser origin to current point
+        vec3 toPoint = hitPoint - laserOrigins[i];
+        
+        // Calculate closest point on laser ray to current point
+        float t = dot(toPoint, laserDirections[i]);
+        vec3 closestPoint = laserOrigins[i] + t * laserDirections[i];
+        
+        // Distance from point to laser beam
+        float distance = length(hitPoint - closestPoint);
+        
+        // Attenuation factors
+        float attenuation = exp(-distance * distance / (laserWidths[i] * laserWidths[i]));
+        float waterAttenuation = exp(-t * 0.5);
+        
+        // Weighted contribution of this laser to the combined color
+        float weight = attenuation * waterAttenuation * laserIntensities[i];
+        combinedLaserColor += laserColors[i] * weight;
+    }
+    
+    // Add the combined laser color
+    color += combinedLaserColor;
+
+    // Add water volume scattering for underwater lasers
+    if (ray.y < 0.0) {
+        // Add a subtle glow/scattering effect along the laser path
+        for(int i = 0; i < MAX_LASERS; i++) {
+            if(i >= activeLasers) break;
+            
+            // Calculate how close this ray comes to the laser beam
+            vec3 rayOrigin = origin - laserOrigins[i];
+            vec3 rayDir = ray;
+            vec3 laserDir = laserDirections[i];
+            
+            // Calculate the closest point between the viewing ray and laser beam
+            float d = dot(cross(rayDir, laserDir), rayOrigin) / length(cross(rayDir, laserDir));
+            
+            // Add scattering contribution
+            float scatterFactor = exp(-abs(d * d) / (laserWidths[i] * 5.0)) * 0.2;
+            color += laserColors[i] * scatterFactor * laserIntensities[i];
+        }
+    }
   } else {
     vec2 t = intersectCube(origin, ray, vec3(-1.0, -poolHeight, -1.0), vec3(1.0, 2.0, 1.0));
     vec3 hit = origin + ray * t.y;
@@ -232,8 +286,8 @@ void main() {
   } else {
     vec3 reflectedRay = reflect(incomingRay, normal);
     vec3 refractedRay = refract(incomingRay, normal, IOR_AIR / IOR_WATER);
-    float fresnel = mix(0.25, 1.0, pow(1.0 - dot(normal, -incomingRay), 3.0));
-    // float fresnel = mix(0.4, 1.0, pow(1.0 - dot(normal, -incomingRay), 5.0)); 
+    // float fresnel = mix(0.25, 1.0, pow(1.0 - dot(normal, -incomingRay), 3.0));
+    float fresnel = mix(0.4, 1.0, pow(1.0 - dot(normal, -incomingRay), 5.0)); 
 
     vec3 reflectedColor = getSurfaceRayColor(vPos, reflectedRay, abovewaterColor);
     vec3 refractedColor = getSurfaceRayColor(vPos, refractedRay, abovewaterColor);

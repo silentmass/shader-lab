@@ -19,19 +19,14 @@ export interface IMaterialParameters {
   barRingSpeedY?: number;
   barRingAngle?: number;
   // New laser parameters
-  laserIntensity?: number;
-  laserWidth?: number;
-  laserColor?: string | THREE.Color;
-  laserOriginX?: number;
-  laserOriginY?: number;
-  laserOriginZ?: number;
-  laserDirectionX?: number;
-  laserDirectionY?: number;
-  laserDirectionZ?: number;
-
-  // New pool light parameters
+  laserIntensities?: number[];
+  laserWidths?: number[];
+  laserColors?: THREE.Color[];
+  laserOrigins?: THREE.Vector3[];
+  laserDirections?: THREE.Vector3[];
   poolLightIntensity?: number;
   poolLightRadius?: number;
+  activeLasers?: number;
 }
 
 const DEFAULT_MATERIAL_SETTINGS = {
@@ -81,16 +76,24 @@ export class GUIManager {
   private _mTriggerTimedEvent: number =
     DEFAULT_MATERIAL_SETTINGS.triggerTimedEvent;
 
-  // For laser
-  private _mLaserIntensity: number = 2.0;
-  private _mLaserWidth: number = 0.02;
-  private _mLaserColor: THREE.Color = new THREE.Color(1.0, 0.2, 0.1);
-  private _mLaserOrigin: THREE.Vector3 = new THREE.Vector3(1.0, 0.05, 0.0);
-  private _mLaserDirection: THREE.Vector3 = new THREE.Vector3(
-    -1.0,
-    -0.1,
-    0.0
-  ).normalize();
+  private _mLaserIntensities: number[] = [2.0, 1.8, 1.5];
+  private _mLaserWidths: number[] = [0.02, 0.015, 0.018];
+  private _mLaserColors: THREE.Color[] = [
+    new THREE.Color(1.0, 0.2, 0.1), // Red
+    new THREE.Color(0.1, 0.2, 1.0), // Blue
+    new THREE.Color(0.1, 1.0, 0.2), // Green
+  ];
+  private _mLaserOrigins: THREE.Vector3[] = [
+    new THREE.Vector3(1.0, 0.1, 0.0),
+    new THREE.Vector3(-1.0, 0.1, 0.0),
+    new THREE.Vector3(0.0, 0.1, 1.0),
+  ];
+  private _mLaserDirections: THREE.Vector3[] = [
+    new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
+    new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
+    new THREE.Vector3(0.0, -0.1, -1.0).normalize(),
+  ];
+  private _mActiveLasers: number = 3;
 
   // For pool lights
   private _mPoolLightIntensity: number = 1.5;
@@ -807,155 +810,203 @@ export class GUIManager {
     const folderWaterControls = this._gui.addFolder("Water Effects");
     const thisRef = this;
 
+    // Define the number of lasers to support
+    const MAX_LASERS = 3;
+
+    // You'll need to update your class properties to support multiple lasers
+    // Replace single laser properties with arrays:
+    // private _mLaserIntensities: number[] = [2.0, 1.8, 1.5];
+    // private _mLaserWidths: number[] = [0.02, 0.015, 0.018];
+    // private _mLaserColors: THREE.Color[] = [
+    //   new THREE.Color(1.0, 0.2, 0.1), // Red
+    //   new THREE.Color(0.1, 0.2, 1.0), // Blue
+    //   new THREE.Color(0.1, 1.0, 0.2)  // Green
+    // ];
+    // private _mLaserOrigins: THREE.Vector3[] = [
+    //   new THREE.Vector3(1.0, 0.05, 0.0),
+    //   new THREE.Vector3(-1.0, 0.05, 0.0),
+    //   new THREE.Vector3(0.0, 0.05, 1.0)
+    // ];
+    // private _mLaserDirections: THREE.Vector3[] = [
+    //   new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
+    //   new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
+    //   new THREE.Vector3(0.0, -0.1, -1.0).normalize()
+    // ];
+    // private _mActiveLasers: number = 3;
+
     // LASER CONTROLS
-    const laserFolder = folderWaterControls.addFolder("Laser Light");
+    const laserFolder = folderWaterControls.addFolder("Laser Lights");
 
-    const laserProps = {
-      get laserIntensity() {
-        return thisRef._mLaserIntensity;
+    // Add a control for the number of active lasers
+    const laserMainProps = {
+      get activeLasers() {
+        return thisRef._mActiveLasers;
       },
-      set laserIntensity(v: number) {
-        thisRef._mLaserIntensity = v;
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserWidth() {
-        return thisRef._mLaserWidth;
-      },
-      set laserWidth(v: number) {
-        thisRef._mLaserWidth = v;
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserColor() {
-        return "#" + thisRef._mLaserColor.getHexString();
-      },
-      set laserColor(hexString: string) {
-        thisRef._mLaserColor = new THREE.Color(hexString);
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserOriginX() {
-        return thisRef._mLaserOrigin.x;
-      },
-      set laserOriginX(v: number) {
-        thisRef._mLaserOrigin.x = v;
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserOriginY() {
-        return thisRef._mLaserOrigin.y;
-      },
-      set laserOriginY(v: number) {
-        thisRef._mLaserOrigin.y = v;
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserOriginZ() {
-        return thisRef._mLaserOrigin.z;
-      },
-      set laserOriginZ(v: number) {
-        thisRef._mLaserOrigin.z = v;
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserDirectionX() {
-        return thisRef._mLaserDirection.x;
-      },
-      set laserDirectionX(v: number) {
-        thisRef._mLaserDirection.x = v;
-        thisRef._mLaserDirection.normalize();
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserDirectionY() {
-        return thisRef._mLaserDirection.y;
-      },
-      set laserDirectionY(v: number) {
-        thisRef._mLaserDirection.y = v;
-        thisRef._mLaserDirection.normalize();
-        thisRef.planeControlsChanged = true;
-        thisRef.returnFocusToRenderer();
-      },
-
-      get laserDirectionZ() {
-        return thisRef._mLaserDirection.z;
-      },
-      set laserDirectionZ(v: number) {
-        thisRef._mLaserDirection.z = v;
-        thisRef._mLaserDirection.normalize();
+      set activeLasers(v: number) {
+        thisRef._mActiveLasers = v;
         thisRef.planeControlsChanged = true;
         thisRef.returnFocusToRenderer();
       },
     };
 
-    // Add laser controls
-    const laserIntensityController = laserFolder
-      .add(laserProps, "laserIntensity", 0, 5)
-      .name("Intensity")
-      .step(0.1);
-    this.registerController("laserIntensity", laserIntensityController);
+    const activeLasersController = laserFolder
+      .add(laserMainProps, "activeLasers", 0, MAX_LASERS)
+      .name("Active Lasers")
+      .step(1);
+    this.registerController("activeLasers", activeLasersController);
 
-    const laserWidthController = laserFolder
-      .add(laserProps, "laserWidth", 0.005, 0.1)
-      .name("Width")
-      .step(0.005);
-    this.registerController("laserWidth", laserWidthController);
+    // Create a subfolder for each laser
+    for (let i = 0; i < MAX_LASERS; i++) {
+      const laserSubfolder = laserFolder.addFolder(`Laser ${i + 1}`);
 
-    const laserColorController = laserFolder
-      .addColor(laserProps, "laserColor")
-      .name("Color");
-    this.registerController("laserColor", laserColorController);
+      const laserProps = {
+        get intensity() {
+          return thisRef._mLaserIntensities[i];
+        },
+        set intensity(v: number) {
+          thisRef._mLaserIntensities[i] = v;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    // Origin and direction controls
-    const laserOriginFolder = laserFolder.addFolder("Origin Position");
+        get width() {
+          return thisRef._mLaserWidths[i];
+        },
+        set width(v: number) {
+          thisRef._mLaserWidths[i] = v;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserOriginXController = laserOriginFolder
-      .add(laserProps, "laserOriginX", -1, 1)
-      .name("X")
-      .step(0.05);
-    this.registerController("laserOriginX", laserOriginXController);
+        get color() {
+          return "#" + thisRef._mLaserColors[i].getHexString();
+        },
+        set color(hexString: string) {
+          thisRef._mLaserColors[i] = new THREE.Color(hexString);
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserOriginYController = laserOriginFolder
-      .add(laserProps, "laserOriginY", -1, 1)
-      .name("Y")
-      .step(0.05);
-    this.registerController("laserOriginY", laserOriginYController);
+        get originX() {
+          return thisRef._mLaserOrigins[i].x;
+        },
+        set originX(v: number) {
+          thisRef._mLaserOrigins[i].x = v;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserOriginZController = laserOriginFolder
-      .add(laserProps, "laserOriginZ", -1, 1)
-      .name("Z")
-      .step(0.05);
-    this.registerController("laserOriginZ", laserOriginZController);
+        get originY() {
+          return thisRef._mLaserOrigins[i].y;
+        },
+        set originY(v: number) {
+          thisRef._mLaserOrigins[i].y = v;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserDirectionFolder = laserFolder.addFolder("Direction");
+        get originZ() {
+          return thisRef._mLaserOrigins[i].z;
+        },
+        set originZ(v: number) {
+          thisRef._mLaserOrigins[i].z = v;
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserDirectionXController = laserDirectionFolder
-      .add(laserProps, "laserDirectionX", -1, 1)
-      .name("X")
-      .step(0.1);
-    this.registerController("laserDirectionX", laserDirectionXController);
+        get directionX() {
+          return thisRef._mLaserDirections[i].x;
+        },
+        set directionX(v: number) {
+          thisRef._mLaserDirections[i].x = v;
+          thisRef._mLaserDirections[i].normalize();
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserDirectionYController = laserDirectionFolder
-      .add(laserProps, "laserDirectionY", -1, 1)
-      .name("Y")
-      .step(0.1);
-    this.registerController("laserDirectionY", laserDirectionYController);
+        get directionY() {
+          return thisRef._mLaserDirections[i].y;
+        },
+        set directionY(v: number) {
+          thisRef._mLaserDirections[i].y = v;
+          thisRef._mLaserDirections[i].normalize();
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
 
-    const laserDirectionZController = laserDirectionFolder
-      .add(laserProps, "laserDirectionZ", -1, 1)
-      .name("Z")
-      .step(0.1);
-    this.registerController("laserDirectionZ", laserDirectionZController);
+        get directionZ() {
+          return thisRef._mLaserDirections[i].z;
+        },
+        set directionZ(v: number) {
+          thisRef._mLaserDirections[i].z = v;
+          thisRef._mLaserDirections[i].normalize();
+          thisRef.planeControlsChanged = true;
+          thisRef.returnFocusToRenderer();
+        },
+      };
 
-    // POOL LIGHT CONTROLS
+      // Add laser controls for this specific laser
+      const intensityController = laserSubfolder
+        .add(laserProps, "intensity", 0, 5)
+        .name("Intensity")
+        .step(0.1);
+      this.registerController(`laser${i}Intensity`, intensityController);
+
+      const widthController = laserSubfolder
+        .add(laserProps, "width", 0.005, 0.1)
+        .name("Width")
+        .step(0.005);
+      this.registerController(`laser${i}Width`, widthController);
+
+      const colorController = laserSubfolder
+        .addColor(laserProps, "color")
+        .name("Color");
+      this.registerController(`laser${i}Color`, colorController);
+
+      // Origin controls
+      const originFolder = laserSubfolder.addFolder("Origin");
+
+      const originXController = originFolder
+        .add(laserProps, "originX", -1, 1)
+        .name("X")
+        .step(0.05);
+      this.registerController(`laser${i}OriginX`, originXController);
+
+      const originYController = originFolder
+        .add(laserProps, "originY", -1, 1)
+        .name("Y")
+        .step(0.05);
+      this.registerController(`laser${i}OriginY`, originYController);
+
+      const originZController = originFolder
+        .add(laserProps, "originZ", -1, 1)
+        .name("Z")
+        .step(0.05);
+      this.registerController(`laser${i}OriginZ`, originZController);
+
+      // Direction controls
+      const directionFolder = laserSubfolder.addFolder("Direction");
+
+      const directionXController = directionFolder
+        .add(laserProps, "directionX", -1, 1)
+        .name("X")
+        .step(0.1);
+      this.registerController(`laser${i}DirectionX`, directionXController);
+
+      const directionYController = directionFolder
+        .add(laserProps, "directionY", -1, 1)
+        .name("Y")
+        .step(0.1);
+      this.registerController(`laser${i}DirectionY`, directionYController);
+
+      const directionZController = directionFolder
+        .add(laserProps, "directionZ", -1, 1)
+        .name("Z")
+        .step(0.1);
+      this.registerController(`laser${i}DirectionZ`, directionZController);
+    }
+
+    // POOL LIGHT CONTROLS - keep this part the same
     const poolLightsFolder = folderWaterControls.addFolder("Pool Lights");
 
     const poolLightProps = {
@@ -995,39 +1046,47 @@ export class GUIManager {
   }
 
   // Laser getters/setters
-  public get laserIntensity(): number {
-    return this._mLaserIntensity;
+  // Getters and setters for the laser arrays
+  public get laserIntensities(): number[] {
+    return this._mLaserIntensities;
   }
-  public set laserIntensity(v: number) {
-    this._mLaserIntensity = v;
-  }
-
-  public get laserWidth(): number {
-    return this._mLaserWidth;
-  }
-  public set laserWidth(v: number) {
-    this._mLaserWidth = v;
+  public set laserIntensities(v: number[]) {
+    this._mLaserIntensities = v;
   }
 
-  public get laserColor(): THREE.Color {
-    return this._mLaserColor;
+  public get laserWidths(): number[] {
+    return this._mLaserWidths;
   }
-  public set laserColor(v: THREE.Color) {
-    this._mLaserColor = v;
-  }
-
-  public get laserOrigin(): THREE.Vector3 {
-    return this._mLaserOrigin;
-  }
-  public set laserOrigin(v: THREE.Vector3) {
-    this._mLaserOrigin = v;
+  public set laserWidths(v: number[]) {
+    this._mLaserWidths = v;
   }
 
-  public get laserDirection(): THREE.Vector3 {
-    return this._mLaserDirection;
+  public get laserColors(): THREE.Color[] {
+    return this._mLaserColors.map((c) => c.clone());
   }
-  public set laserDirection(v: THREE.Vector3) {
-    this._mLaserDirection = v;
+  public set laserColors(v: THREE.Color[]) {
+    this._mLaserColors = v.map((c) => c.clone());
+  }
+
+  public get laserOrigins(): THREE.Vector3[] {
+    return this._mLaserOrigins.map((v) => v.clone());
+  }
+  public set laserOrigins(v: THREE.Vector3[]) {
+    this._mLaserOrigins = v.map((vec) => vec.clone());
+  }
+
+  public get laserDirections(): THREE.Vector3[] {
+    return this._mLaserDirections.map((v) => v.clone());
+  }
+  public set laserDirections(v: THREE.Vector3[]) {
+    this._mLaserDirections = v.map((vec) => vec.clone());
+  }
+
+  public get activeLasers(): number {
+    return this._mActiveLasers;
+  }
+  public set activeLasers(v: number) {
+    this._mActiveLasers = v;
   }
 
   // Pool light getters/setters
@@ -1089,11 +1148,13 @@ export class GUIManager {
       angle: this.barRingAngle * Math.PI,
 
       // New water-specific parameters
-      laserIntensity: this.laserIntensity,
-      laserWidth: this.laserWidth,
-      laserColor: this.laserColor,
-      laserOrigin: this.laserOrigin,
-      laserDirection: this.laserDirection,
+      // Update laser arrays
+      laserIntensities: this.laserIntensities,
+      laserWidths: this.laserWidths,
+      laserColors: this.laserColors,
+      laserOrigins: this.laserOrigins,
+      laserDirections: this.laserDirections,
+      activeLasers: this.activeLasers,
       poolLightIntensity: this.poolLightIntensity,
       poolLightRadius: this.poolLightRadius,
 
