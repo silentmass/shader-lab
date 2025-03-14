@@ -333,7 +333,7 @@ export class GUIManager {
       material: defaultMaterialName,
       // Color controls
       get color() {
-        return thisRef._mBaseColor.getHexString();
+        return thisRef.color.getHexString();
       },
       set color(hexString: string) {
         thisRef.color = hexString;
