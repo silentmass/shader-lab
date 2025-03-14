@@ -150,8 +150,8 @@ export class WaterShaderMaterial
     };
     this.uniforms.activeLasers = { value: defaultLasers.length };
 
-    // const poolHeight = 1.0;
-    const poolHeight = 0.1;
+    const poolHeight = 1.0;
+    // const poolHeight = 0.1;
 
     // In waterShaderMaterial.ts, add new uniforms:
     this.uniforms.poolLights = {
@@ -360,19 +360,18 @@ export class WaterShaderMaterial
       // Create a splash pattern of drops when event is triggered
       console.log("Water event triggered! Creating drops...");
 
-      // Create a central bigger drop
-      this.addDrop(0, 0, 0.06, 0.08);
-
       // Create a ring of smaller drops around it
       const numDrops = 8; // Number of drops in the ring
       const radius = 0.2; // Distance from center
 
-      for (let i = 0; i < numDrops; i++) {
-        const angle = (i / numDrops) * Math.PI * 2;
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-        this.addDrop(x, y, 0.03, 0.04);
-      }
+      // for (let i = 0; i < numDrops; i++) {
+      //   const angle = (i / numDrops) * Math.PI * 2;
+      //   const x = Math.cos(angle) * radius;
+      //   const y = Math.sin(angle) * radius;
+      //   this.addDrop(x, y, 0.03, 0.54);
+      // }
+
+      this.addDrop(0, 0, 0.06, 0.84);
 
       // Add some random drops as well
       // for (let i = 0; i < 5; i++) {
