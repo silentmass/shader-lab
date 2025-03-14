@@ -272,7 +272,7 @@ export class ShaderLab {
     const defaultMaterialName = "water";
     const defaultMeshName = "WaterPlaneMesh";
 
-    const waterPlaneGeometry = new THREE.PlaneGeometry(2, 2, 100, 100);
+    const waterPlaneGeometry = new THREE.PlaneGeometry(2, 2, 200, 200);
 
     // Create materials
 
