@@ -10,7 +10,6 @@ export class Caustics {
   public texture: THREE.WebGLRenderTarget;
   private _causticMesh: THREE.Mesh;
 
-  // Replace your existing Caustics constructor with this fixed version
   constructor(geometry: THREE.BufferGeometry, light: THREE.Vector3) {
     this._camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 2000);
     this._geometry = geometry.clone();

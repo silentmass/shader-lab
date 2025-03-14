@@ -22,10 +22,10 @@ export class WaterSimulation {
     this._geometry = new THREE.PlaneGeometry(2, 2);
 
     // Create render targets for ping-pong rendering
-    this._textureA = new THREE.WebGLRenderTarget(512, 512, {
+    this._textureA = new THREE.WebGLRenderTarget(256, 256, {
       type: THREE.FloatType,
     });
-    this._textureB = new THREE.WebGLRenderTarget(512, 512, {
+    this._textureB = new THREE.WebGLRenderTarget(256, 256, {
       type: THREE.FloatType,
     });
     this.texture = this._textureA;

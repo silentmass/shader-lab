@@ -10,7 +10,6 @@ import waterWaterVertexShader from "../../glsl/water/water/vertex.glsl";
 import waterWaterFragmentShader from "../../glsl/water/water/fragment.glsl";
 import { Caustics } from "./caustics.ts";
 import { WaterSimulation } from "./watersimulation.ts";
-import { Pool } from "./pool.ts";
 import { PlaneMaterial } from "../PlaneMaterial";
 import { stripVersion } from "../MaterialUtils.ts";
 
@@ -27,7 +26,6 @@ export class WaterShaderMaterial
   private _camera: THREE.PerspectiveCamera;
   private _waterSimulation: WaterSimulation;
   private _caustics: Caustics;
-  private _pool: Pool;
   private _light: THREE.Vector3;
   private _gameWidth: number;
   private _gameHeight: number;
@@ -66,10 +64,8 @@ export class WaterShaderMaterial
     const textureLoader = new THREE.TextureLoader();
     const cubeTextureLoader = new THREE.CubeTextureLoader();
 
-    // Simple placeholder textures
     const tiles = textureLoader.load("assets/images/water/tiles.jpg");
 
-    // Placeholder sky - ideally this would load the 6 faces
     const sky = cubeTextureLoader.load([
       "assets/images/water/xpos.jpg",
       "assets/images/water/xneg.jpg",
@@ -112,8 +108,6 @@ export class WaterShaderMaterial
       options.geometry || new THREE.PlaneGeometry(2, 2, 200, 200);
     this._caustics = new Caustics(geometry, this._light);
 
-    this._pool = new Pool(this._light, this._tiles);
-
     // Add initial drops
     this._initializeWater();
   }
@@ -141,13 +135,6 @@ export class WaterShaderMaterial
 
     // Generate initial caustics
     this._caustics.update(this._renderer, this._waterSimulation.texture);
-
-    this._pool.update(
-      this._renderer,
-      this._camera,
-      this._waterSimulation.texture,
-      this._caustics.texture.texture
-    );
 
     // Set initial textures
     this._water = this._waterSimulation.texture.texture;
@@ -290,13 +277,6 @@ export class WaterShaderMaterial
 
     // Update the caustics
     this._caustics.update(this._renderer, this._waterSimulation.texture);
-
-    this._pool.update(
-      this._renderer,
-      this._camera,
-      this._waterSimulation.texture,
-      this._caustics.texture.texture
-    );
 
     // Update the uniforms
     this._water = this._waterSimulation.texture.texture;
