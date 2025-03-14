@@ -260,6 +260,10 @@ export class ShaderLab {
   }
 
   private createGUIControlledMaterials() {
+    // Define default material name - we'll use this after creating all meshes
+    const defaultMaterialName = "brick";
+    const defaultMeshName = "BrickMesh";
+
     // Create materials
 
     const sphereMaterial = new PlaneMaterial(
@@ -279,7 +283,8 @@ export class ShaderLab {
     this._guimanager.addPlaneMaterial(pulsatingPaddleMaterial, "paddle");
     this._guimanager.addPlaneMaterial(stripes, "stripes");
     this._guimanager.addPlaneMaterial(circles, "circles");
-    this._guimanager.setupPlaneMaterialFolder();
+    this._guimanager.setupPlaneMaterialFolder(defaultMaterialName);
+    this._guimanager.setActiveMaterial(defaultMaterialName);
 
     // Create meshes
 
@@ -391,18 +396,28 @@ export class ShaderLab {
         // Hide this mesh until we're ready to show it
         mesh.visible = false;
 
-        // Now that both meshes are created, set up the GUI and activate the first mesh
-        this.setupMeshGUI();
+        this.setupMeshGUI(defaultMeshName); // Use actual name of the paddle mesh
       },
       pulsatingRoundedPaddleUniforms
     );
   }
 
-  private setupMeshGUI() {
-    // Setup the mesh selector in the GUI after all meshes are loaded
-    this._guimanager.setupMeshSelector();
+  private setupMeshGUI(defaultMeshName?: string) {
+    // Setup the mesh selector in the GUI with our default
+    this._guimanager.setupMeshSelector(defaultMeshName);
 
-    // Set the first mesh as active if available
+    // Set the specified mesh as active if it exists
+    if (defaultMeshName) {
+      const defaultMesh = this.guiControlledMeshes.find(
+        (mesh) => mesh.name === defaultMeshName
+      );
+      if (defaultMesh) {
+        this.setActiveMesh(defaultMesh);
+        return;
+      }
+    }
+
+    // Fallback to first mesh if default wasn't found
     if (this.guiControlledMeshes.length > 0) {
       this.setActiveMesh(this.guiControlledMeshes[0]);
     }

@@ -265,7 +265,7 @@ export class GUIManager {
     return false;
   }
 
-  public setupMeshSelector(): void {
+  public setupMeshSelector(defaultMeshName?: string): void {
     // First remove any existing mesh selector folder
     const existingFolder = this._gui.folders.find(
       (f) => f._title === "Mesh Selection"
@@ -292,8 +292,11 @@ export class GUIManager {
 
     const meshNames = meshes.map((mesh) => mesh.name || "Unnamed Mesh");
 
-    // Find the active mesh name or use the first one
-    const activeName = this._parentRef.activeMesh?.name || meshNames[0];
+    // Find the active mesh name using the default if provided, or use the first one
+    const activeName =
+      defaultMeshName && meshNames.includes(defaultMeshName)
+        ? defaultMeshName
+        : this._parentRef.activeMesh?.name || meshNames[0];
 
     const meshProps = {
       activeMesh: activeName,
@@ -525,14 +528,25 @@ export class GUIManager {
     this._mTriggerTimedEvent = v;
   }
 
-  public setupPlaneMaterialFolder(): void {
+  public setupPlaneMaterialFolder(defaultMaterialName?: string): void {
     const thisRef = this;
 
-    const [defaultMaterialName, defaultMaterial] = Array.from(
-      this._planeMaterials.entries()
-    )[0];
+    // If default material name is provided and exists, use it; otherwise use the first material
+    let initialMaterialName = defaultMaterialName;
+    let initialMaterial: PlaneMaterial | null = null;
 
-    this.planeMaterial = defaultMaterial;
+    if (initialMaterialName && this._planeMaterials.has(initialMaterialName)) {
+      initialMaterial = this._planeMaterials.get(initialMaterialName) || null;
+    } else {
+      const firstEntry = Array.from(this._planeMaterials.entries())[0];
+      if (firstEntry) {
+        [initialMaterialName, initialMaterial] = firstEntry;
+      }
+    }
+
+    if (initialMaterial) {
+      this.planeMaterial = initialMaterial;
+    }
 
     const planeMaterialProps = {
       material: defaultMaterialName,
@@ -661,6 +675,9 @@ export class GUIManager {
       )
       .name("Material")
       .onChange((materialName) => {
+        if (!materialName) {
+          return;
+        }
         const material = this._planeMaterials.get(materialName);
         if (material) {
           console.log(material);
