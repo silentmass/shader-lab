@@ -1,5 +1,5 @@
 import WebGL from "three/addons/capabilities/WebGL.js";
-import { ShaderLab } from "./shader-lab";
+import { ShaderLab } from "./ShaderLab";
 
 if (WebGL.isWebGL2Available()) {
   const canvas = document.getElementById("canvas");

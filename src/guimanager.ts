@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { WebGLRenderer } from "three";
 import { PlaneMaterial } from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-import { ShaderLab } from "./shader-lab";
+import { ShaderLab } from "./ShaderLab";
 
 // Define an interface for material parameters
 export interface IMaterialParameters {
