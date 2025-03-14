@@ -52,9 +52,13 @@ export class WaterShaderMaterial
 
     // Light direction
     const light = new THREE.Vector3(
-      0.7559289460184544,
-      0.7559289460184544,
-      -0.3779644730092272
+      // -0.7559289460184544,
+      // 0.0,
+      // 0.7559289460184544,
+      0.0,
+      0.9,
+      // -0.3779644730092272
+      0.0
     );
 
     // Load textures
