@@ -6,6 +6,7 @@ export interface MeshSpecificUniforms {
   uGeometryCenter?: THREE.Vector3;
   uBarRingForegroundColor?: THREE.Color;
   uBarRingBackgroundColor?: THREE.Color;
+  uColor?: THREE.Color;
   uBaseColor?: THREE.Color;
   uBarRingCount?: number;
   uBarRingOpacity?: number;

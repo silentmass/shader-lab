@@ -19,6 +19,7 @@ import { PulsatingRoundedPaddle } from "./entities/PulsatingRoundedPaddle";
 import { Sphere } from "./entities/Sphere";
 import { Brick } from "./entities/Brick";
 import { WaterShaderMaterial } from "./materials/water/waterShaderMaterial";
+import { WaterPlane } from "./entities/WaterPlane";
 
 interface CustomShaderMaterial extends THREE.RawShaderMaterial, PlaneMaterial {
   update: (params?: any) => { updatedUniforms: string[] };
@@ -216,6 +217,9 @@ export class ShaderLab {
         // Update GUIManager controllers to initial uniforms when changing mesh
 
         this.guimanager.setMaterialParameters({
+          color:
+            this._meshUniformsManager.getMeshUniforms(mesh.uuid)?.uColor ||
+            this.guimanager.color,
           baseColor:
             this._meshUniformsManager.getMeshUniforms(mesh.uuid)?.uBaseColor ||
             this.guimanager.baseColor,
@@ -363,31 +367,27 @@ export class ShaderLab {
     // Create a dedicated water plane with correct orientation
     const waterPlanePosition = new THREE.Vector3(0, 0, 0);
 
-    // Apply correct rotation to make it flat on XZ plane
-    const waterPlaneMesh = new THREE.Mesh(waterPlaneGeometry, waterMaterial);
-    waterPlaneMesh.name = "WaterPlaneMesh";
-    waterPlaneMesh.position.copy(waterPlanePosition);
-    // Rotate to lie flat on XZ plane (around X axis by 90 degrees)
-    waterPlaneMesh.rotation.x = -Math.PI / 2;
-    waterPlaneMesh.rotation.z = Math.PI;
-    this._scene.add(waterPlaneMesh);
-
     // Set up water-specific uniforms
     const waterPlaneUniforms: MeshSpecificUniforms = {
       uGeometryCenter: waterPlanePosition.clone(),
-      uBarRingForegroundColor: new THREE.Color("#33ccff"),
-      uBarRingBackgroundColor: new THREE.Color("#006699"),
-      uBaseColor: new THREE.Color("#0099cc"),
+      uColor: new THREE.Color("darkslategray"),
+      uBaseColor: new THREE.Color("darkslategray"),
     };
 
-    // Add to GUI-controlled meshes
-    this.guiControlledMeshes.push(waterPlaneMesh);
-
-    // Register mesh-specific uniforms
-    this.registerMeshUniforms(waterPlaneMesh, waterPlaneUniforms);
-
-    // Make this mesh initially visible if it's the default
-    waterPlaneMesh.visible = false;
+    // Apply correct rotation to make it flat on XZ plane
+    new WaterPlane(
+      this._renderer,
+      this._scene,
+      waterPlaneGeometry,
+      waterMaterial,
+      waterPlanePosition,
+      (mesh: THREE.Mesh): void => {
+        this.guiControlledMeshes.push(mesh);
+        this.registerMeshUniforms(mesh, waterPlaneUniforms);
+        // Hide this mesh until we're ready to show it
+        mesh.visible = false;
+      }
+    ); // Pass the uniforms here)
 
     // Brick
 
