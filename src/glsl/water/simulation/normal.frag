@@ -4,10 +4,8 @@ precision highp int;
 
 uniform sampler2D mainTexture;
 
-// Input from vertex shader
 in vec2 vCoord;
 
-// Output
 out vec4 fragColor;
 
 void main() {

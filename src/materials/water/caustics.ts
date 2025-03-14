@@ -1,7 +1,7 @@
 // materials/water/caustics.ts
 import * as THREE from "three";
-import vertexShader from "../../glsl/water/caustics/vertex.glsl";
-import fragmentShader from "../../glsl/water/caustics/fragment.glsl";
+import causticsVertexShader from "../../glsl/water/caustics/caustics.vert";
+import causticsFragmentShader from "../../glsl/water/caustics/caustics.frag";
 import { stripVersion } from "../MaterialUtils";
 
 export class Caustics {
@@ -22,8 +22,8 @@ export class Caustics {
         light: { value: light },
         water: { value: null },
       },
-      vertexShader: stripVersion(vertexShader),
-      fragmentShader: stripVersion(fragmentShader),
+      vertexShader: stripVersion(causticsVertexShader),
+      fragmentShader: stripVersion(causticsFragmentShader),
       glslVersion: THREE.GLSL3,
     });
 

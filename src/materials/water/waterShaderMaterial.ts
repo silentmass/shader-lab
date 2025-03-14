@@ -6,8 +6,8 @@ import {
   type GameEventData,
   type IMaterialGameEvents,
 } from "../IMaterialGameEvents.ts";
-import waterWaterVertexShader from "../../glsl/water/water/vertex.glsl";
-import waterWaterFragmentShader from "../../glsl/water/water/fragment.glsl";
+import waterWaterVertexShader from "../../glsl/water/water/water.vert";
+import waterWaterFragmentShader from "../../glsl/water/water/water.frag";
 import { Caustics } from "./caustics.ts";
 import { WaterSimulation } from "./watersimulation.ts";
 import { PlaneMaterial } from "../PlaneMaterial";

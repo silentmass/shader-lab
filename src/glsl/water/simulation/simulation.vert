@@ -2,10 +2,8 @@
 precision highp float;
 precision highp int;
 
-// Input attributes
 in vec3 position;
 
-// Output to fragment shader
 out vec2 vCoord;
 
 void main() {

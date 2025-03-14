@@ -6,10 +6,8 @@ uniform mat4 projectionMatrix;
 uniform mat4 modelViewMatrix;
 uniform sampler2D water;
 
-// Input attributes
 in vec3 position;
 
-// Output to fragment shader
 out vec3 vEye;
 out vec3 vPos;
 
