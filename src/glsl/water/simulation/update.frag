@@ -33,5 +33,9 @@ void main() {
   /* move the vertex along the velocity */
   info.r += info.g;
 
+  /* Add a small baseline correction factor to ensure water returns to zero */
+  float baselineCorrection = 0.001;
+  info.r = mix(info.r, 0.0, baselineCorrection);
+
   fragColor = info;
 }
