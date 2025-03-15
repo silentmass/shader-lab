@@ -23,7 +23,7 @@ const DEFAULT_UNIFORMS = {
   lightColor: new THREE.Color(1.0, 1.0, 1.0),
 };
 
-interface Uniforms {
+export interface Uniforms {
   uTime?: number;
   uColor?: THREE.Color;
   uBaseColor?: THREE.Color;
