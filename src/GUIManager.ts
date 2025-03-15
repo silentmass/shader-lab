@@ -756,7 +756,7 @@ export class GUIManager {
     this.registerController("barRingOpacity", barRingOpacityController);
 
     const eventController = folderPlaneMaterial
-      .add(planeMaterialProps, "event", 0, 1)
+      .add(planeMaterialProps, "event", 0, 10)
       .name("Event")
       .step(1.0);
     this.registerController("event", eventController);
@@ -969,19 +969,19 @@ export class GUIManager {
       const originXController = originFolder
         .add(laserProps, "originX", -1, 1)
         .name("X")
-        .step(0.05);
+        .step(0.1);
       this.registerController(`laser${i}OriginX`, originXController);
 
       const originYController = originFolder
         .add(laserProps, "originY", -1, 1)
         .name("Y")
-        .step(0.05);
+        .step(0.1);
       this.registerController(`laser${i}OriginY`, originYController);
 
       const originZController = originFolder
         .add(laserProps, "originZ", -1, 1)
         .name("Z")
-        .step(0.05);
+        .step(0.1);
       this.registerController(`laser${i}OriginZ`, originZController);
 
       // Direction controls
@@ -1038,7 +1038,7 @@ export class GUIManager {
     const poolLightRadiusController = poolLightsFolder
       .add(poolLightProps, "poolLightRadius", 0.1, 1.0)
       .name("Radius")
-      .step(0.05);
+      .step(0.1);
     this.registerController("poolLightRadius", poolLightRadiusController);
 
     // Open folders
