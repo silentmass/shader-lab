@@ -16,11 +16,27 @@ export class Caustics {
 
     this.texture = new THREE.WebGLRenderTarget(1024, 1024);
 
-    // Change ShaderMaterial to RawShaderMaterial and fix the shaders
+    // Properly initialize all uniforms
     const material = new THREE.RawShaderMaterial({
       uniforms: {
         light: { value: light },
         water: { value: null },
+        // For laser caustics
+        laserOrigins: {
+          value: [
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 0),
+          ],
+        },
+        laserDirections: {
+          value: [
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 0),
+          ],
+        },
+        activeLasers: { value: 0 },
       },
       vertexShader: stripVersion(causticsVertexShader),
       fragmentShader: stripVersion(causticsFragmentShader),
@@ -28,6 +44,36 @@ export class Caustics {
     });
 
     this._causticMesh = new THREE.Mesh(this._geometry, material);
+  }
+
+  // Add this method to your Caustics class
+  public setLaserUniforms(
+    origins?: any[],
+    directions?: any[],
+    active?: number
+  ) {
+    const material = this._causticMesh.material as THREE.RawShaderMaterial;
+
+    // Safely set the origins
+    if (origins && Array.isArray(origins) && origins.length > 0) {
+      // Make sure all items are Vector3 objects
+      material.uniforms.laserOrigins.value = origins.map((origin) =>
+        origin instanceof THREE.Vector3 ? origin : new THREE.Vector3(0, 0, 0)
+      );
+    }
+
+    // Safely set the directions
+    if (directions && Array.isArray(directions) && directions.length > 0) {
+      // Make sure all items are Vector3 objects
+      material.uniforms.laserDirections.value = directions.map((dir) =>
+        dir instanceof THREE.Vector3 ? dir : new THREE.Vector3(0, 0, 0)
+      );
+    }
+
+    // Safely set active lasers count
+    if (typeof active === "number") {
+      material.uniforms.activeLasers.value = active;
+    }
   }
 
   update(renderer: THREE.WebGLRenderer, waterTexture: THREE.WebGLRenderTarget) {

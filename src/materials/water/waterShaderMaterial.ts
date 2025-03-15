@@ -209,7 +209,15 @@ export class WaterShaderMaterial
     this._waterSimulation.updateNormals(this._renderer);
 
     // Generate initial caustics
+    // In _initializeWater method, after creating the caustics
     this._caustics.update(this._renderer, this._waterSimulation.texture);
+
+    // Safely set the laser uniforms
+    this._caustics.setLaserUniforms(
+      this.uniforms.laserOrigins?.value || [],
+      this.uniforms.laserDirections?.value || [],
+      this.uniforms.activeLasers?.value || 0
+    );
 
     // Set initial textures
     this._water = this._waterSimulation.texture.texture;
@@ -401,8 +409,14 @@ export class WaterShaderMaterial
     this._waterSimulation.stepSimulation(this._renderer);
     this._waterSimulation.updateNormals(this._renderer);
 
-    // Update the caustics
     this._caustics.update(this._renderer, this._waterSimulation.texture);
+
+    // Safely set the laser uniforms
+    this._caustics.setLaserUniforms(
+      this.uniforms.laserOrigins?.value || [],
+      this.uniforms.laserDirections?.value || [],
+      this.uniforms.activeLasers?.value || 0
+    );
 
     // Update the uniforms
     this._water = this._waterSimulation.texture.texture;
