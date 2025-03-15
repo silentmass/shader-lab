@@ -76,27 +76,27 @@ export class GUIManager {
   private _mTriggerTimedEvent: number =
     DEFAULT_MATERIAL_SETTINGS.triggerTimedEvent;
 
-  private _mLaserIntensities: number[] = [2.0, 1.8, 1.5];
-  private _mLaserWidths: number[] = [0.02, 0.015, 0.018];
+  private _mLaserIntensities: number[] = [5.0, 5.0, 5.0];
+  private _mLaserWidths: number[] = [0.02, 0.02, 0.02];
   private _mLaserColors: THREE.Color[] = [
-    new THREE.Color(1.0, 0.2, 0.1), // Red
-    new THREE.Color(0.1, 0.2, 1.0), // Blue
-    new THREE.Color(0.1, 1.0, 0.2), // Green
+    new THREE.Color(1.0, 0.0, 0.0), // Red
+    new THREE.Color(0.0, 1.0, 0.0), // Green
+    new THREE.Color(0.0, 0.0, 1.0), // Blue
   ];
   private _mLaserOrigins: THREE.Vector3[] = [
+    new THREE.Vector3(1.0, 0.1, 0.4),
     new THREE.Vector3(1.0, 0.1, 0.0),
-    new THREE.Vector3(-1.0, 0.1, 0.0),
-    new THREE.Vector3(0.0, 0.1, 1.0),
+    new THREE.Vector3(1.0, 0.1, -0.4),
   ];
   private _mLaserDirections: THREE.Vector3[] = [
-    new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
-    new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
-    new THREE.Vector3(0.0, -0.1, -1.0).normalize(),
+    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
+    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
+    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
   ];
   private _mActiveLasers: number = 3;
 
   // For pool lights
-  private _mPoolLightIntensity: number = 1.5;
+  private _mPoolLightIntensity: number = 0.5;
   private _mPoolLightRadius: number = 0.4;
 
   constructor(parentRef: any, renderer: WebGLRenderer) {

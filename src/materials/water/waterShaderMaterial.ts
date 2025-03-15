@@ -20,21 +20,21 @@ const DEFAULT_WATER_UNIFORMS = {
   lasers: [
     {
       origin: new THREE.Vector3(1.0, 0.1, 0.0),
-      direction: new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
+      direction: new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
       color: new THREE.Vector3(1.0, 0.2, 0.1), // Red
-      intensity: 2.0,
+      intensity: 3.0,
       width: 0.02,
     },
     {
       origin: new THREE.Vector3(-1.0, 0.1, 0.0),
-      direction: new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
+      direction: new THREE.Vector3(1.0, 0.0, 0.0).normalize(),
       color: new THREE.Vector3(0.1, 0.2, 1.0), // Blue
       intensity: 1.8,
       width: 0.015,
     },
     {
       origin: new THREE.Vector3(0.0, 0.1, 1.0),
-      direction: new THREE.Vector3(0.0, -0.1, -1.0).normalize(),
+      direction: new THREE.Vector3(0.0, 0.0, -1.0).normalize(),
       color: new THREE.Vector3(0.1, 1.0, 0.2), // Green
       intensity: 1.5,
       width: 0.018,
