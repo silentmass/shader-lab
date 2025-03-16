@@ -54,6 +54,10 @@ export class GUIManager {
 
   private _activeMeshId: string | null = null;
 
+  // Key map for event triggers
+  private _keyEventMap: Map<string, () => void> = new Map();
+  private _keyEventActive: boolean = true;
+
   // Background settings
   private _backgroundColor: THREE.Color = new THREE.Color("#000000");
 
@@ -102,6 +106,7 @@ export class GUIManager {
     this.planeControlsChanged = true;
 
     this.setupBackgroundFolder();
+    this.setupKeyEventHandlers();
   }
 
   private returnFocusToRenderer(): void {
@@ -174,6 +179,137 @@ export class GUIManager {
 
     // Initialize the background color
     this.updateBackgrounds();
+  }
+
+  /**
+   * Initialize keyboard event handlers
+   */
+  private setupKeyEventHandlers(): void {
+    // Define default key bindings
+    this.registerKeyEvent("Space", () => {
+      this.triggerEvent(2.0);
+      console.log("Event triggered with Space key");
+    });
+
+    this.registerKeyEvent("KeyE", () => {
+      this.event = (this.event + 1) % 11; // Cycle through events 0-10
+      this.updateControllerValue("event", this.event);
+      console.log(`Event changed to: ${this.event}`);
+    });
+
+    this.registerKeyEvent("KeyI", () => {
+      // Increase intensity by 0.1, capped at 1.0
+      this.eventIntensity = Math.min(1.0, this.eventIntensity + 0.1);
+      this.updateControllerValue("eventIntensity", this.eventIntensity);
+      console.log(
+        `Event intensity increased to: ${this.eventIntensity.toFixed(1)}`
+      );
+    });
+
+    this.registerKeyEvent("KeyK", () => {
+      // Decrease intensity by 0.1, floor at 0.0
+      this.eventIntensity = Math.max(0.0, this.eventIntensity - 0.1);
+      this.updateControllerValue("eventIntensity", this.eventIntensity);
+      console.log(
+        `Event intensity decreased to: ${this.eventIntensity.toFixed(1)}`
+      );
+    });
+
+    // Add key listener to document
+    document.addEventListener("keydown", this.handleKeyDown.bind(this));
+
+    // Add info about key controls to the GUI
+    this.addKeyControlsInfoFolder();
+  }
+
+  /**
+   * Handle keydown events
+   * @param event Keyboard event
+   */
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (!this._keyEventActive) return;
+
+    // Skip if user is typing in an input field
+    if (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
+    const handler = this._keyEventMap.get(event.code);
+    if (handler) {
+      handler();
+      this.planeControlsChanged = true;
+      event.preventDefault(); // Prevent default browser behavior
+    }
+  }
+
+  /**
+   * Register a key event handler
+   * @param keyCode The key code (e.g., 'Space', 'KeyE')
+   * @param handler The function to execute when the key is pressed
+   */
+  public registerKeyEvent(keyCode: string, handler: () => void): void {
+    this._keyEventMap.set(keyCode, handler);
+  }
+
+  /**
+   * Unregister a key event handler
+   * @param keyCode The key code to unregister
+   */
+  public unregisterKeyEvent(keyCode: string): void {
+    this._keyEventMap.delete(keyCode);
+  }
+
+  /**
+   * Enable or disable key event handling
+   * @param active Whether key events should be processed
+   */
+  public setKeyEventsActive(active: boolean): void {
+    this._keyEventActive = active;
+  }
+
+  /**
+   * Add a folder to the GUI with information about keyboard controls
+   */
+  private addKeyControlsInfoFolder(): void {
+    const folderKeyControls = this._gui.addFolder("Keyboard Controls");
+    const thisRef = this;
+
+    // Create an object with read-only properties for display
+    const keyControlsInfo = {
+      Space: "Trigger event",
+      E: "Cycle through event types",
+      I: "Increase event intensity (+0.1)",
+      K: "Decrease event intensity (-0.1)",
+    };
+
+    // Add read-only text displays
+    for (const [key, description] of Object.entries(keyControlsInfo)) {
+      const controller = folderKeyControls.add(
+        { [`${key}`]: description },
+        `${key}`
+      );
+      controller.disable(); // Make it read-only
+    }
+
+    // Add toggle for enabling/disabling keyboard controls
+    const keyboardControlsEnabled = {
+      get enabled() {
+        return thisRef._keyEventActive;
+      },
+      set enabled(value: boolean) {
+        thisRef._keyEventActive = value;
+        console.log(`Keyboard controls ${value ? "enabled" : "disabled"}`);
+      },
+    };
+
+    folderKeyControls
+      .add(keyboardControlsEnabled, "enabled")
+      .name("Enable Keyboard Controls");
+
+    folderKeyControls.open();
   }
 
   // Method to store a controller with a name
@@ -1279,6 +1415,9 @@ export class GUIManager {
 
   // Public methods for external control
   public dispose(): void {
+    // Remove event listener when disposing
+    document.removeEventListener("keydown", this.handleKeyDown.bind(this));
+
     if (this._gui) {
       this._gui.destroy();
     }
