@@ -2,17 +2,14 @@
 precision highp float;
 precision highp int;
 
-// Inputs from vertex shader
 in vec3 vOldPos;
 in vec3 vNewPos;
 in vec3 vRay;
 
-// Output color (required in GLSL3)
 out vec4 fragColor;
 
 #define MAX_LASERS 3  // Define the maximum number of lasers
 
-// Uniforms
 uniform vec3 laserOrigins[MAX_LASERS];
 uniform vec3 laserDirections[MAX_LASERS];
 uniform int activeLasers;
@@ -50,8 +47,5 @@ void main() {
     
     // Add to the red channel which controls caustic intensity
     fragColor.r += laserFactor * distanceFactor;
-    
-    // Optional: add some color variation to the green channel
-    fragColor.g += 0.2 * laserFactor * distanceFactor;
   }
 }
