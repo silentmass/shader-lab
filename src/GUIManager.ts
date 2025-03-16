@@ -996,40 +996,48 @@ export class GUIManager {
     );
 
     // Presets for different water types
-    // const waterPresets = {
-    //   'Default': () => {
-    //     waterMaterial.setWaveSimulationParams(2.0, 0.965, 0.001);
-    //   },
-    //   'Ocean': () => {
-    //     waterMaterial.setWaveSimulationParams(1.5, 0.99, 0.0005);
-    //   },
-    //   'Pond': () => {
-    //     waterMaterial.setWaveSimulationParams(2.5, 0.96, 0.002);
-    //   },
-    //   'Oil': () => {
-    //     waterMaterial.setWaveSimulationParams(1.0, 0.995, 0.0001);
-    //   },
-    //   'Mercury': () => {
-    //     waterMaterial.setWaveSimulationParams(4.0, 0.93, 0.004);
-    //   }
-    // };
+    const waterPresets: Map<string, () => void> = new Map([
+      [
+        "Slow",
+        () => {
+          waveSpeedController.setValue(0.2);
+          wavePersistenceController.setValue(0.995);
+          waveBaselineCorrectionController.setValue(0.1);
+        },
+      ],
+      [
+        "Water",
+        () => {
+          waveSpeedController.setValue(2.0);
+          wavePersistenceController.setValue(0.95);
+          waveBaselineCorrectionController.setValue(0.0005);
+        },
+      ],
+      [
+        "Slow Water",
+        () => {
+          waveSpeedController.setValue(2.0);
+          wavePersistenceController.setValue(0.965);
+          waveBaselineCorrectionController.setValue(0.0001);
+        },
+      ],
+    ]);
 
     // Add presets to GUI
-    // const presetController = waterPhysicsFolder.add(
-    //   { preset: 'Default' },
-    //   'preset',
-    //   Object.keys(waterPresets)
-    // ).name('Water Type');
+    const presetController = waterPhysicsFolder
+      .add({ preset: "Slow" }, "preset", Array.from(waterPresets.keys()))
+      .name("Water Type");
+    this.registerController("preset", presetController);
 
-    // presetController.onChange((value: string) => {
-    //   const presetFunction = waterPresets[value];
-    //   if (presetFunction) {
-    //     presetFunction();
+    presetController.onChange((value: string) => {
+      const presetFunction = waterPresets.get(value);
+      if (presetFunction) {
+        presetFunction();
 
-    //     // Update GUI controllers to match the new values
-    //     // This requires keeping references to the controllers
-    //   }
-    // });
+        // Update GUI controllers to match the new values
+        // This requires keeping references to the controllers
+      }
+    });
 
     waterPhysicsFolder.open();
   }
