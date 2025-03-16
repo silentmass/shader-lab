@@ -8,7 +8,6 @@ out vec3 vOldPos;
 out vec3 vNewPos;
 out vec3 vRay;
 
-// Uniforms
 uniform vec3 light;
 uniform sampler2D water;
 
@@ -22,7 +21,6 @@ vec3 project(vec3 origin, vec3 ray, vec3 refractedLight) {
 }
 
 void main() {
-  // Use texture() instead of texture2D() in GLSL3
   vec4 info = texture(water, position.xy * 0.5 + 0.5);
   info.ba *= 0.5;
   vec3 normal = vec3(info.b, sqrt(1.0 - dot(info.ba, info.ba)), info.a);
