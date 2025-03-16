@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as Tone from "tone";
 import { WebGLRenderer } from "three";
 import PlaneMaterial, {
   DEFAULT_PLANE_UNIFORMS,
@@ -189,6 +190,15 @@ export class GUIManager {
     this.registerKeyEvent("Space", () => {
       this.triggerEvent(2.0);
       console.log("Event triggered with Space key");
+
+      const synthA = new Tone.FMSynth().toDestination();
+      // const osc = new Tone.Oscillator(220, "sine")
+      //   .toDestination()
+      //   .start()
+      //   .stop("+0.5");
+
+      // all loops start when the Transport is started
+      synthA.triggerAttackRelease("c2", "8n");
     });
 
     this.registerKeyEvent("KeyE", () => {
