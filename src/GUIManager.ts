@@ -55,7 +55,7 @@ export class GUIManager {
   private _activeMeshId: string | null = null;
 
   // Background settings
-  private _mBackgroundColor: THREE.Color = new THREE.Color("#000000");
+  private _backgroundColor: THREE.Color = new THREE.Color("#000000");
 
   // Material settings
   private _mColor: THREE.Color = DEFAULT_MATERIAL_SETTINGS.color.clone();
@@ -112,7 +112,7 @@ export class GUIManager {
 
   private updateBackgrounds(): void {
     // Update both the document body background and the THREE.js scene background
-    const colorHex = "#" + this._mBackgroundColor.getHexString();
+    const colorHex = "#" + this._backgroundColor.getHexString();
 
     // Update body background
     document.body.style.backgroundColor = colorHex;
@@ -120,7 +120,7 @@ export class GUIManager {
     // Update THREE.js scene background if parent reference has access to the scene
     if (this._parentRef && this._parentRef._scene) {
       // Set the scene background color
-      this._parentRef._scene.background = this._mBackgroundColor.clone();
+      this._parentRef._scene.background = this._backgroundColor.clone();
     }
   }
 
@@ -154,14 +154,13 @@ export class GUIManager {
 
     const propsBackgroundPlane = {
       get backgroundColor() {
-        return "#" + thisRef._mBackgroundColor.getHexString();
+        return "#" + thisRef._backgroundColor.getHexString();
       },
       set backgroundColor(hexString: string) {
-        thisRef._mBackgroundColor = new THREE.Color(hexString);
+        thisRef._backgroundColor = new THREE.Color(hexString);
         // Update the parent's backgroundColor if available
         if (thisRef._parentRef.backgroundColor) {
-          thisRef._parentRef.backgroundColor =
-            thisRef._mBackgroundColor.clone();
+          thisRef._parentRef.backgroundColor = thisRef._backgroundColor.clone();
         }
         thisRef.returnFocusToRenderer();
         thisRef.updateBackgrounds();
@@ -1043,11 +1042,11 @@ export class GUIManager {
   }
 
   public get backgroundColor(): THREE.Color {
-    return this._mBackgroundColor;
+    return this._backgroundColor;
   }
 
   public set backgroundColor(v: string) {
-    this._mBackgroundColor = new THREE.Color(v);
+    this._backgroundColor = new THREE.Color(v);
     this.updateBackgrounds();
   }
 
