@@ -310,6 +310,7 @@ export class ShaderLab {
     this._guimanager.addPlaneMaterial(circles, "circles");
     this._guimanager.setupPlaneMaterialFolder(defaultMaterialName);
     this._guimanager.setupWaterControlsFolder();
+    this._guimanager.setupWaterSimulationControls();
     this._guimanager.setActiveMaterial(defaultMaterialName);
 
     // Create meshes

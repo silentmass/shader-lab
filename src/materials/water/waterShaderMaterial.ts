@@ -9,33 +9,37 @@ import {
 import waterWaterVertexShader from "../../glsl/water/water/water.vert";
 import waterWaterFragmentShader from "../../glsl/water/water/water.frag";
 import { Caustics } from "./caustics.ts";
-import { WaterSimulation } from "./watersimulation.ts";
-import { PlaneMaterial, Uniforms } from "../PlaneMaterial";
+import WaterSimulation from "./watersimulation.ts";
+import {
+  IPlaneMaterialParameters,
+  PlaneMaterial,
+  Uniforms,
+} from "../PlaneMaterial";
 import { stripVersion } from "../MaterialUtils.ts";
 
 // Define default water-specific values at the module level
-const DEFAULT_WATER_UNIFORMS = {
+export const DEFAULT_WATER_UNIFORMS = {
   underwater: 0.0,
   poolHeight: 1.0,
   lasers: [
     {
-      origin: new THREE.Vector3(1.0, 0.1, 0.0),
+      origin: new THREE.Vector3(1.0, 0.1, 0.4),
       direction: new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
-      color: new THREE.Vector3(1.0, 0.2, 0.1), // Red
+      color: new THREE.Color(1.0, 1.0, 1.0), // Red
       intensity: 3.0,
       width: 0.02,
     },
     {
       origin: new THREE.Vector3(-1.0, 0.1, 0.0),
       direction: new THREE.Vector3(1.0, 0.0, 0.0).normalize(),
-      color: new THREE.Vector3(0.1, 0.2, 1.0), // Blue
+      color: new THREE.Color(1.0, 1.0, 1.0), // Blue
       intensity: 1.8,
       width: 0.015,
     },
     {
-      origin: new THREE.Vector3(0.0, 0.1, 1.0),
-      direction: new THREE.Vector3(0.0, 0.0, -1.0).normalize(),
-      color: new THREE.Vector3(0.1, 1.0, 0.2), // Green
+      origin: new THREE.Vector3(1.0, 0.1, -0.4),
+      direction: new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
+      color: new THREE.Color(1.0, 1.0, 1.0), // Green
       intensity: 1.5,
       width: 0.018,
     },
@@ -58,7 +62,7 @@ const DEFAULT_WATER_UNIFORMS = {
       color: new THREE.Vector3(0.8, 0.0, 0.8), // Purple
     },
   ],
-  poolLightIntensity: 1.5,
+  poolLightIntensity: 0.0,
   poolLightRadius: 0.4,
 };
 
@@ -90,6 +94,18 @@ interface WaterShaderOptions {
   height?: number;
   geometry?: THREE.BufferGeometry;
   uniforms?: WaterUniforms & Uniforms; // Combine with PlaneMaterial uniforms
+}
+
+export interface IWaterShaderMaterialParameters
+  extends IPlaneMaterialParameters {
+  laserIntensities?: number[];
+  laserWidths?: number[];
+  laserColors?: THREE.Color[];
+  laserOrigins?: THREE.Vector3[];
+  laserDirections?: THREE.Vector3[];
+  poolLightIntensity?: number;
+  poolLightRadius?: number;
+  activeLasers?: number;
 }
 
 /**
@@ -184,16 +200,7 @@ export class WaterShaderMaterial
       const defaultLaser = defaultLasers[index] || defaultLasers[0];
 
       // Handle color conversion from THREE.Color to THREE.Vector3 if needed
-      let laserColor: THREE.Vector3;
-      if (laser.color instanceof THREE.Color) {
-        laserColor = new THREE.Vector3(
-          laser.color.r,
-          laser.color.g,
-          laser.color.b
-        );
-      } else {
-        laserColor = laser.color || defaultLaser.color;
-      }
+      const laserColor = laser.color || defaultLaser.color;
 
       return {
         origin: laser.origin || defaultLaser.origin,
@@ -297,7 +304,7 @@ export class WaterShaderMaterial
 
     // Generate initial caustics
     // In _initializeWater method, after creating the caustics
-    this._caustics.update(this._renderer, this._waterSimulation.texture);
+    this._caustics.update(this._renderer, this._waterSimulation.renderTarget);
 
     // Safely set the laser uniforms
     this._caustics.setLaserUniforms(
@@ -307,7 +314,7 @@ export class WaterShaderMaterial
     );
 
     // Set initial textures
-    this._water = this._waterSimulation.texture.texture;
+    this._water = this._waterSimulation.texture;
     this._causticTex = this._caustics.texture.texture;
     this.uniforms.water.value = this._water;
     this.uniforms.causticTex.value = this._causticTex;
@@ -490,9 +497,9 @@ export class WaterShaderMaterial
 
       case 3: // Ripple pattern
         for (let i = 0; i < 15; i++) {
-          const radius = 0.02 + i * 0.03;
+          const radius = 2.0 * 0.02 + i * 0.03;
           // Alternate positive and negative to create ripple effect
-          const strength = (i % 2 === 0 ? 0.03 : -0.03) * (1 - i * 0.05);
+          const strength = 34.0 * (i % 2 === 0 ? 0.03 : -0.03) * (1 - i * 0.05);
           this.addDrop(x, y, radius, strength);
         }
         break;
@@ -527,11 +534,147 @@ export class WaterShaderMaterial
   }
 
   /**
+   * Add multiple concentric ring waves with identical heights at a specified position
+   *
+   * @param x - X position in normalized coordinates (-1 to 1)
+   * @param y - Y position in normalized coordinates (-1 to 1)
+   * @param numRings - Number of concentric rings to create
+   * @param ringSpacing - Distance between each ring
+   * @param waveHeight - Fixed height for all rings (positive for crests, negative for troughs)
+   * @param delayBetweenRings - Optional delay in milliseconds between ring creation
+   */
+  public addConstantHeightRings(
+    x: number,
+    y: number,
+    numRings: number = 5,
+    ringSpacing: number = 0.04,
+    waveHeight: number = 0.03,
+    delayBetweenRings: number = 0
+  ): void {
+    // Calculate initial radius - start smaller for more defined rings
+    const initialRadius = 0.02;
+
+    // If no delay, create all rings immediately
+    if (delayBetweenRings <= 0) {
+      for (let i = 0; i < numRings; i++) {
+        // Calculate ring radius based on spacing
+        const radius = initialRadius + ringSpacing * i;
+
+        // Use the same fixed height for all rings
+        // Note: Instead of varying the strength, we're keeping it constant
+        this.addDrop(x, y, radius, waveHeight);
+      }
+    } else {
+      // Create rings with delay between them for animation effect
+      for (let i = 0; i < numRings; i++) {
+        setTimeout(() => {
+          const radius = initialRadius + ringSpacing * i;
+          this.addDrop(x, y, radius, waveHeight);
+        }, i * delayBetweenRings);
+      }
+    }
+  }
+
+  /**
+   * Creates alternating concentric rings (peaks and troughs) for a standing wave effect
+   * This gives a more dramatic ripple pattern with consistent amplitude
+   *
+   * @param x - X position in normalized coordinates (-1 to 1)
+   * @param y - Y position in normalized coordinates (-1 to 1)
+   * @param numRings - Number of rings to create
+   * @param ringSpacing - Spacing between rings
+   * @param waveHeight - Height of the waves (will be used as both positive and negative)
+   * @param delayBetweenRings - Optional delay in milliseconds
+   */
+  public addAlternatingRings(
+    x: number,
+    y: number,
+    numRings: number = 10,
+    ringSpacing: number = 0.03,
+    waveHeight: number = 0.04,
+    delayBetweenRings: number = 0
+  ): void {
+    const initialRadius = 0.02;
+
+    if (delayBetweenRings <= 0) {
+      for (let i = 0; i < numRings; i++) {
+        const radius = initialRadius + ringSpacing * i;
+        // Alternate between positive and negative heights
+        const strength = i % 2 === 0 ? waveHeight : -waveHeight;
+        this.addDrop(x, y, radius, strength);
+      }
+    } else {
+      for (let i = 0; i < numRings; i++) {
+        setTimeout(() => {
+          const radius = initialRadius + ringSpacing * i;
+          const strength = i % 2 === 0 ? waveHeight : -waveHeight;
+          this.addDrop(x, y, radius, strength);
+        }, i * delayBetweenRings);
+      }
+    }
+  }
+
+  /**
    * Updates the resolution uniform if the canvas size changes
    */
   public updateResolution(width: number, height: number): void {
     this._gameWidth = width;
     this._gameHeight = height;
+  }
+
+  // Add these methods to your WaterShaderMaterial class
+
+  /**
+   * Set how fast waves travel across the water surface
+   * @param speed - Speed multiplier (default: 2.0)
+   *   - Values (0.5-2.0): Slower wave propagation
+   */
+  public setWaveSpeed(speed: number): void {
+    this._waterSimulation.setWaveSpeed(speed);
+  }
+
+  /**
+   * Set how long waves persist before fading
+   * @param persistence - Persistence factor (default: 0.965)
+   *   - Values closer to 1.0 (0.99): Waves persist much longer
+   *   - Lower values (0.9): Waves fade quickly
+   */
+  public setWavePersistence(persistence: number): void {
+    this._waterSimulation.setWavePersistence(persistence);
+  }
+
+  /**
+   * Set how quickly water returns to a perfectly flat state
+   * @param correction - Correction factor (default: 0.001)
+   *   - Smaller values (0.0001): Extremely persistent waves
+   *   - Larger values (0.01): Water quickly flattens
+   */
+  public setWaveBaselineCorrection(correction: number): void {
+    this._waterSimulation.setWaveBaselineCorrection(correction);
+  }
+
+  /**
+   * Configure water wave simulation parameters
+   * @param speed - Wave propagation speed
+   * @param persistence - Wave amplitude persistence
+   * @param correction - Water flattening correction
+   */
+  public setWaveSimulationParams(
+    speed?: number,
+    persistence?: number,
+    correction?: number
+  ): void {
+    if (speed !== undefined) {
+      this.setWaveSpeed(speed);
+    }
+
+    if (persistence !== undefined) {
+      this.setWavePersistence(persistence);
+    }
+
+    if (correction !== undefined) {
+      this.setWaveBaselineCorrection(correction);
+    }
   }
 
   /**
@@ -575,7 +718,34 @@ export class WaterShaderMaterial
   /**
    * Override the update method from PlaneMaterial to include water simulation and handle events
    */
-  public override update(params?: any): { updatedUniforms: string[] } {
+  public override update(params?: {
+    color?: THREE.Color;
+    baseColor?: THREE.Color;
+    barRingForegroundColor?: THREE.Color;
+    barRingBackgroundColor?: THREE.Color;
+    barRingOpacity?: number;
+    event?: number;
+    eventIntensity?: number;
+    barRingCount?: number;
+    speed?: THREE.Vector2;
+    angle?: number;
+    triggerTimedEvent?: number;
+    geometryCenter?: THREE.Vector3;
+    cameraPosition?: THREE.Vector3;
+    lightPosition?: THREE.Vector3;
+    lightColor?: THREE.Color;
+    laserIntensities?: number[];
+    laserWidths?: number[];
+    laserColors?: THREE.Color[];
+    laserOrigins?: THREE.Vector3[];
+    laserDirections?: THREE.Vector3[];
+    poolLightIntensity?: number;
+    poolLightRadius?: number;
+    activeLasers?: number;
+    waveSpeed?: number;
+    wavePersistence?: number;
+    waveBaselineCorrection?: number;
+  }): { updatedUniforms: string[] } {
     // First call parent update method to handle standard PlaneMaterial uniforms
     const result = super.update(params);
 
@@ -619,7 +789,6 @@ export class WaterShaderMaterial
         result.updatedUniforms.push("activeLasers");
       }
 
-      // Pool light parameters remain the same
       if (params.poolLightIntensity !== undefined) {
         this.uniforms.poolLightIntensity.value = params.poolLightIntensity;
         result.updatedUniforms.push("poolLightIntensity");
@@ -629,6 +798,12 @@ export class WaterShaderMaterial
         this.uniforms.poolLightRadius.value = params.poolLightRadius;
         result.updatedUniforms.push("poolLightRadius");
       }
+
+      this.setWaveSimulationParams(
+        params.waveSpeed,
+        params.wavePersistence,
+        params.waveBaselineCorrection
+      );
     }
 
     // Check if a timed event was triggered via the GUI
@@ -636,52 +811,10 @@ export class WaterShaderMaterial
       // Create a splash pattern of drops when event is triggered
       console.log("Water event triggered! Creating drops...");
 
-      // Create a ring of smaller drops around it
-      const numDrops = 8; // Number of drops in the ring
-      const radius = 0.2; // Distance from center
-
-      // for (let i = 0; i < numDrops; i++) {
-      //   const angle = (i / numDrops) * Math.PI * 2;
-      //   const x = Math.cos(angle) * radius;
-      //   const y = Math.sin(angle) * radius;
-      //   this.addDrop(x, y, 0.03, 0.54);
-      // }
-
-      // this.addDrop(0, 0, 0.06, 0.84);
-
-      // Add some random drops as well
-      // for (let i = 0; i < 5; i++) {
-      //   const x = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
-      //   const y = (Math.random() * 2 - 1) * 0.5; // Random position in [-0.5, 0.5]
-      //   const size = 0.02 + Math.random() * 0.02; // Random size between 0.02 and 0.04
-      //   const strength =
-      //     (Math.random() > 0.5 ? 1 : -1) * (0.01 + Math.random() * 0.02); // Random strength
-      //   this.addDrop(x, y, size, strength);
-      // }
-      console.log(params.event);
       this.addPatternedWaves(0, 0, params.event);
-      // switch (params.event) {
-      //   case 1:
-      //     this.handleGameEvent({
-      //       type: GameEventType.BALL_COLLISION,
-      //       position: { x: 0.0, y: 0.0 },
-      //     });
-      //     break;
-
-      //   case 2:
-      //     this.handleGameEvent({
-      //       type: GameEventType.BRICK_DESTROYED,
-      //       position: { x: 0.0, y: 0.0 },
-      //     });
-      //     break;
-
-      //   case 3:
-      //     this.handleGameEvent({
-      //       type: GameEventType.PADDLE_HIT,
-      //       position: { x: 0.0, y: 0.0 },
-      //     });
-      //     break;
-      // }
+      // this.addRingWaves(0, 0, 20, 0.03, 0.14, 0.04, 0.3);
+      // this.addConstantHeightRings(0, 0);
+      // this.addAlternatingRings(0, 0, 30, 0.05, 0.8, -0.1);
     }
 
     // Then update water simulation
@@ -701,7 +834,7 @@ export class WaterShaderMaterial
     this._waterSimulation.stepSimulation(this._renderer);
     this._waterSimulation.updateNormals(this._renderer);
 
-    this._caustics.update(this._renderer, this._waterSimulation.texture);
+    this._caustics.update(this._renderer, this._waterSimulation.renderTarget);
 
     // Safely set the laser uniforms
     this._caustics.setLaserUniforms(
@@ -711,7 +844,7 @@ export class WaterShaderMaterial
     );
 
     // Update the uniforms
-    this._water = this._waterSimulation.texture.texture;
+    this._water = this._waterSimulation.texture;
     this._causticTex = this._caustics.texture.texture;
     this.uniforms.water.value = this._water;
     this.uniforms.causticTex.value = this._causticTex;

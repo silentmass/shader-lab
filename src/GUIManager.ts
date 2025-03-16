@@ -1,33 +1,23 @@
 import * as THREE from "three";
 import { WebGLRenderer } from "three";
-import { PlaneMaterial } from "./materials/PlaneMaterial";
+import {
+  IPlaneMaterialParameters,
+  PlaneMaterial,
+} from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { ShaderLab } from "./ShaderLab";
+import {
+  DEFAULT_WATER_UNIFORMS,
+  IWaterShaderMaterialParameters,
+  WaterShaderMaterial,
+} from "./materials/water/waterShaderMaterial";
+import { DEFAULT_SIMULATION_UPDATE_UNIFORMS } from "./materials/water/watersimulation";
 
 // Define an interface for material parameters
 // Just a no change comment
-export interface IMaterialParameters {
-  color?: string | THREE.Color;
-  baseColor?: string | THREE.Color;
-  barRingForegroundColor?: string | THREE.Color;
-  barRingBackgroundColor?: string | THREE.Color;
-  barRingOpacity?: number;
-  event?: number;
-  eventIntensity?: number;
-  barRingCount?: number;
-  barRingSpeedX?: number;
-  barRingSpeedY?: number;
-  barRingAngle?: number;
-  // New laser parameters
-  laserIntensities?: number[];
-  laserWidths?: number[];
-  laserColors?: THREE.Color[];
-  laserOrigins?: THREE.Vector3[];
-  laserDirections?: THREE.Vector3[];
-  poolLightIntensity?: number;
-  poolLightRadius?: number;
-  activeLasers?: number;
-}
+export interface IMaterialParameters
+  extends IPlaneMaterialParameters,
+    IWaterShaderMaterialParameters {}
 
 const DEFAULT_MATERIAL_SETTINGS = {
   color: new THREE.Color("pink"),
@@ -35,12 +25,20 @@ const DEFAULT_MATERIAL_SETTINGS = {
   barRingForegroundColor: new THREE.Color("#6A452F"),
   barRingBackgroundColor: new THREE.Color("#90BDC3"),
   barRingOpacity: 1.0,
-  event: 1,
+  event: 3,
   eventIntensity: 1.0,
   barRingCount: 10,
   barRingSpeed: new THREE.Vector2(1.0, 0.0),
   barRingAngle: 0.0,
   triggerTimedEvent: 0.0,
+  laserIntensities: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.intensity),
+  laserWidths: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.width),
+  laserColors: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.color),
+  laserOrigins: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.origin),
+  laserDirections: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.direction),
+  poolLightIntensity: DEFAULT_WATER_UNIFORMS.poolLightIntensity,
+  poolLightRadius: DEFAULT_WATER_UNIFORMS.poolLightRadius,
+  ...DEFAULT_SIMULATION_UPDATE_UNIFORMS,
 };
 
 export class GUIManager {
@@ -49,9 +47,10 @@ export class GUIManager {
   private _parentRef: ShaderLab;
   private _renderer: WebGLRenderer;
 
-  private _planeMaterial: PlaneMaterial | null = null;
+  private _planeMaterial: PlaneMaterial | WaterShaderMaterial | null = null;
   private _planeControlsChanged: boolean = false;
-  private _planeMaterials: Map<string, PlaneMaterial> = new Map();
+  private _planeMaterials: Map<string, PlaneMaterial | WaterShaderMaterial> =
+    new Map();
 
   private _activeMeshId: string | null = null;
 
@@ -76,28 +75,25 @@ export class GUIManager {
   private _mTriggerTimedEvent: number =
     DEFAULT_MATERIAL_SETTINGS.triggerTimedEvent;
 
-  private _mLaserIntensities: number[] = [5.0, 5.0, 5.0];
-  private _mLaserWidths: number[] = [0.02, 0.02, 0.02];
-  private _mLaserColors: THREE.Color[] = [
-    new THREE.Color(1.0, 0.0, 0.0), // Red
-    new THREE.Color(0.0, 1.0, 0.0), // Green
-    new THREE.Color(0.0, 0.0, 1.0), // Blue
-  ];
-  private _mLaserOrigins: THREE.Vector3[] = [
-    new THREE.Vector3(1.0, 0.1, 0.4),
-    new THREE.Vector3(1.0, 0.1, 0.0),
-    new THREE.Vector3(1.0, 0.1, -0.4),
-  ];
-  private _mLaserDirections: THREE.Vector3[] = [
-    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
-    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
-    new THREE.Vector3(-1.0, 0.0, 0.0).normalize(),
-  ];
-  private _mActiveLasers: number = 3;
+  private _mLaserIntensities: number[] =
+    DEFAULT_MATERIAL_SETTINGS.laserIntensities;
+  private _mLaserWidths: number[] = DEFAULT_MATERIAL_SETTINGS.laserWidths;
+  private _mLaserColors: THREE.Color[] = DEFAULT_MATERIAL_SETTINGS.laserColors;
+  private _mLaserOrigins: THREE.Vector3[] =
+    DEFAULT_MATERIAL_SETTINGS.laserOrigins;
+  private _mLaserDirections: THREE.Vector3[] =
+    DEFAULT_MATERIAL_SETTINGS.laserDirections;
+  private _mActiveLasers: number =
+    DEFAULT_MATERIAL_SETTINGS.laserIntensities.length;
 
-  // For pool lights
-  private _mPoolLightIntensity: number = 0.5;
-  private _mPoolLightRadius: number = 0.4;
+  private _mPoolLightIntensity: number =
+    DEFAULT_MATERIAL_SETTINGS.poolLightIntensity;
+  private _mPoolLightRadius: number = DEFAULT_MATERIAL_SETTINGS.poolLightRadius;
+
+  private _mWaveSpeed: number = DEFAULT_MATERIAL_SETTINGS.waveSpeed;
+  private _mWavePersistence: number = DEFAULT_MATERIAL_SETTINGS.wavePersistence;
+  private _mWaveBaselineCorrection: number =
+    DEFAULT_MATERIAL_SETTINGS.waveBaselineCorrection;
 
   constructor(parentRef: any, renderer: WebGLRenderer) {
     this._gui = new GUI();
@@ -106,6 +102,79 @@ export class GUIManager {
     this.planeControlsChanged = true;
 
     this.setupBackgroundFolder();
+  }
+
+  private returnFocusToRenderer(): void {
+    setTimeout(() => {
+      this._renderer.domElement.focus();
+    }, 0);
+  }
+
+  private updateBackgrounds(): void {
+    // Update both the document body background and the THREE.js scene background
+    const colorHex = "#" + this._mBackgroundColor.getHexString();
+
+    // Update body background
+    document.body.style.backgroundColor = colorHex;
+
+    // Update THREE.js scene background if parent reference has access to the scene
+    if (this._parentRef && this._parentRef._scene) {
+      // Set the scene background color
+      this._parentRef._scene.background = this._mBackgroundColor.clone();
+    }
+  }
+
+  private updateGUIFromMeshUniforms(meshId: string): void {
+    // Get mesh uniforms from the parent's MeshUniformsManager
+    if (this._parentRef.meshUniformsManager) {
+      const uniforms =
+        this._parentRef.meshUniformsManager.getMeshUniforms(meshId);
+      if (uniforms) {
+        // Update GUI values based on the mesh's uniforms
+        if (uniforms.uBaseColor) this._mBaseColor = uniforms.uBaseColor.clone();
+        if (uniforms.uBarRingForegroundColor)
+          this._mBarRingForegroundColor =
+            uniforms.uBarRingForegroundColor.clone();
+        if (uniforms.uBarRingBackgroundColor)
+          this._mBarRingBackgroundColor =
+            uniforms.uBarRingBackgroundColor.clone();
+
+        // Signal that controls need updating
+        this.planeControlsChanged = true;
+
+        // Force GUI to update (you might need to implement this differently based on your GUI library)
+        // this._gui.updateDisplay();
+      }
+    }
+  }
+
+  private setupBackgroundFolder(): void {
+    const folderBackgroundPlane = this._gui.addFolder("Background");
+    const thisRef = this; // Reference to the GUIManager instance
+
+    const propsBackgroundPlane = {
+      get backgroundColor() {
+        return "#" + thisRef._mBackgroundColor.getHexString();
+      },
+      set backgroundColor(hexString: string) {
+        thisRef._mBackgroundColor = new THREE.Color(hexString);
+        // Update the parent's backgroundColor if available
+        if (thisRef._parentRef.backgroundColor) {
+          thisRef._parentRef.backgroundColor =
+            thisRef._mBackgroundColor.clone();
+        }
+        thisRef.returnFocusToRenderer();
+        thisRef.updateBackgrounds();
+      },
+      Mode: "Shader", // Default value
+    };
+
+    folderBackgroundPlane
+      .addColor(propsBackgroundPlane, "backgroundColor")
+      .name("Background Color");
+
+    // Initialize the background color
+    this.updateBackgrounds();
   }
 
   // Method to store a controller with a name
@@ -281,6 +350,13 @@ export class GUIManager {
     this.planeControlsChanged = true;
   }
 
+  public addPlaneMaterial(
+    material: PlaneMaterial | WaterShaderMaterial,
+    name: string
+  ): void {
+    this._planeMaterials.set(name, material);
+  }
+
   /**
    * Set the active material by name
    * @param materialName Name of the material to activate
@@ -384,188 +460,12 @@ export class GUIManager {
       });
   }
 
-  private updateGUIFromMeshUniforms(meshId: string): void {
-    // Get mesh uniforms from the parent's MeshUniformsManager
-    if (this._parentRef.meshUniformsManager) {
-      const uniforms =
-        this._parentRef.meshUniformsManager.getMeshUniforms(meshId);
-      if (uniforms) {
-        // Update GUI values based on the mesh's uniforms
-        if (uniforms.uBaseColor) this._mBaseColor = uniforms.uBaseColor.clone();
-        if (uniforms.uBarRingForegroundColor)
-          this._mBarRingForegroundColor =
-            uniforms.uBarRingForegroundColor.clone();
-        if (uniforms.uBarRingBackgroundColor)
-          this._mBarRingBackgroundColor =
-            uniforms.uBarRingBackgroundColor.clone();
-
-        // Signal that controls need updating
-        this.planeControlsChanged = true;
-
-        // Force GUI to update (you might need to implement this differently based on your GUI library)
-        // this._gui.updateDisplay();
-      }
-    }
-  }
-
-  private setupBackgroundFolder(): void {
-    const folderBackgroundPlane = this._gui.addFolder("Background");
-    const thisRef = this; // Reference to the GUIManager instance
-
-    const propsBackgroundPlane = {
-      get backgroundColor() {
-        return "#" + thisRef._mBackgroundColor.getHexString();
-      },
-      set backgroundColor(hexString: string) {
-        thisRef._mBackgroundColor = new THREE.Color(hexString);
-        // Update the parent's backgroundColor if available
-        if (thisRef._parentRef.backgroundColor) {
-          thisRef._parentRef.backgroundColor =
-            thisRef._mBackgroundColor.clone();
-        }
-        thisRef.returnFocusToRenderer();
-        thisRef.updateBackgrounds();
-      },
-      Mode: "Shader", // Default value
-    };
-
-    folderBackgroundPlane
-      .addColor(propsBackgroundPlane, "backgroundColor")
-      .name("Background Color");
-
-    // Initialize the background color
-    this.updateBackgrounds();
-  }
-
-  private updateBackgrounds(): void {
-    // Update both the document body background and the THREE.js scene background
-    const colorHex = "#" + this._mBackgroundColor.getHexString();
-
-    // Update body background
-    document.body.style.backgroundColor = colorHex;
-
-    // Update THREE.js scene background if parent reference has access to the scene
-    if (this._parentRef && this._parentRef._scene) {
-      // Set the scene background color
-      this._parentRef._scene.background = this._mBackgroundColor.clone();
-    }
-  }
-
-  public get backgroundColor(): THREE.Color {
-    return this._mBackgroundColor;
-  }
-
-  public set backgroundColor(v: string) {
-    this._mBackgroundColor = new THREE.Color(v);
-    this.updateBackgrounds();
-  }
-
-  public get planeControlsChanged() {
-    const changed = this._planeControlsChanged;
-    this._planeControlsChanged = false;
-    return changed;
-  }
-
-  public set planeControlsChanged(v: boolean) {
-    this._planeControlsChanged = v;
-  }
-
-  public get color(): THREE.Color {
-    return this._mColor;
-  }
-
-  public set color(v: THREE.Color) {
-    this._mColor = v;
-  }
-
-  public get baseColor(): THREE.Color {
-    return this._mBaseColor;
-  }
-
-  public set baseColor(v: THREE.Color) {
-    this._mBaseColor = v;
-  }
-
-  public get barRingForegroundColor(): THREE.Color {
-    return this._mBarRingForegroundColor;
-  }
-
-  public set barRingForegroundColor(v: THREE.Color) {
-    this._mBarRingForegroundColor = v;
-  }
-
-  public get barRingBackgroundColor(): THREE.Color {
-    return this._mBarRingBackgroundColor;
-  }
-
-  public set barRingBackgroundColor(v: THREE.Color) {
-    this._mBarRingBackgroundColor = v;
-  }
-
-  public get barRingOpacity(): number {
-    return this._mBarRingOpacity;
-  }
-
-  public set barRingOpacity(v: number) {
-    this._mBarRingOpacity = v;
-  }
-
-  public get event(): number {
-    return this._mEvent;
-  }
-
-  public set event(v: number) {
-    this._mEvent = v;
-  }
-
-  public get eventIntensity(): number {
-    return this._mEventIntensity;
-  }
-
-  public set eventIntensity(v: number) {
-    this._mEventIntensity = v;
-  }
-
-  public get barRingCount(): number {
-    return this._mBarRingCount;
-  }
-
-  public set barRingCount(v: number) {
-    this._mBarRingCount = v;
-  }
-
-  public get barRingSpeed(): THREE.Vector2 {
-    return this._mBarRingSpeed;
-  }
-
-  public set barRingSpeed(v: THREE.Vector2) {
-    this._mBarRingSpeed = v;
-  }
-
-  public get barRingAngle(): number {
-    return this._mBarRingAngle;
-  }
-
-  public set barRingAngle(v: number) {
-    this._mBarRingAngle = v;
-  }
-
-  public get triggerTimedEvent(): number {
-    const eventDuration = this._mTriggerTimedEvent;
-    this.triggerTimedEvent = 0.0;
-    return eventDuration;
-  }
-
-  public set triggerTimedEvent(v: number) {
-    this._mTriggerTimedEvent = v;
-  }
-
   public setupPlaneMaterialFolder(defaultMaterialName?: string): void {
     const thisRef = this;
 
     // If default material name is provided and exists, use it; otherwise use the first material
     let initialMaterialName = defaultMaterialName;
-    let initialMaterial: PlaneMaterial | null = null;
+    let initialMaterial: PlaneMaterial | WaterShaderMaterial | null = null;
 
     if (initialMaterialName && this._planeMaterials.has(initialMaterialName)) {
       initialMaterial = this._planeMaterials.get(initialMaterialName) || null;
@@ -813,27 +713,6 @@ export class GUIManager {
     // Define the number of lasers to support
     const MAX_LASERS = 3;
 
-    // You'll need to update your class properties to support multiple lasers
-    // Replace single laser properties with arrays:
-    // private _mLaserIntensities: number[] = [2.0, 1.8, 1.5];
-    // private _mLaserWidths: number[] = [0.02, 0.015, 0.018];
-    // private _mLaserColors: THREE.Color[] = [
-    //   new THREE.Color(1.0, 0.2, 0.1), // Red
-    //   new THREE.Color(0.1, 0.2, 1.0), // Blue
-    //   new THREE.Color(0.1, 1.0, 0.2)  // Green
-    // ];
-    // private _mLaserOrigins: THREE.Vector3[] = [
-    //   new THREE.Vector3(1.0, 0.05, 0.0),
-    //   new THREE.Vector3(-1.0, 0.05, 0.0),
-    //   new THREE.Vector3(0.0, 0.05, 1.0)
-    // ];
-    // private _mLaserDirections: THREE.Vector3[] = [
-    //   new THREE.Vector3(-1.0, -0.1, 0.0).normalize(),
-    //   new THREE.Vector3(1.0, -0.1, 0.0).normalize(),
-    //   new THREE.Vector3(0.0, -0.1, -1.0).normalize()
-    // ];
-    // private _mActiveLasers: number = 3;
-
     // LASER CONTROLS
     const laserFolder = folderWaterControls.addFolder("Laser Lights");
 
@@ -1045,8 +924,227 @@ export class GUIManager {
     folderWaterControls.open();
   }
 
+  public setupWaterSimulationControls(): void {
+    const waterPhysicsFolder = this._gui.addFolder("Water Physics");
+    const thisRef = this;
+    const waterPhysicsProps = {
+      get waveSpeed() {
+        return thisRef._mWaveSpeed;
+      },
+      set waveSpeed(v: number) {
+        thisRef._mWaveSpeed = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get wavePersistence() {
+        return thisRef._mWavePersistence;
+      },
+      set wavePersistence(v: number) {
+        thisRef._mWavePersistence = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+
+      get waveBaselineCorrection() {
+        return thisRef._mWaveBaselineCorrection;
+      },
+      set waveBaselineCorrection(v: number) {
+        thisRef._mWaveBaselineCorrection = v;
+        thisRef.planeControlsChanged = true;
+        thisRef.returnFocusToRenderer();
+      },
+    };
+
+    // Wave speed control
+    const waveSpeedController = waterPhysicsFolder
+      .add(
+        waterPhysicsProps, // Default value
+        "waveSpeed",
+        0.1, // Min value (slower waves)
+        2.0 // Max value (faster waves)
+      )
+      .name("Wave Speed")
+      .step(0.1);
+    this.registerController("waveSpeed", waveSpeedController);
+
+    // Wave persistence control
+    const wavePersistenceController = waterPhysicsFolder
+      .add(
+        waterPhysicsProps, // Default value
+        "wavePersistence",
+        0.9, // Min value (quick decay)
+        0.999 // Max value (very slow decay)
+      )
+      .name("Wave Persistence")
+      .step(0.001);
+    this.registerController("wavePersistence", wavePersistenceController);
+
+    // Baseline correction control
+    const waveBaselineCorrectionController = waterPhysicsFolder
+      .add(
+        waterPhysicsProps, // Default value
+        "waveBaselineCorrection",
+        0.0001, // Min value (very slow flattening)
+        0.01 // Max value (quick flattening)
+      )
+      .name("Surface Tension")
+      .step(0.0001);
+    this.registerController(
+      "waveBaselineCorrection",
+      waveBaselineCorrectionController
+    );
+
+    // Presets for different water types
+    // const waterPresets = {
+    //   'Default': () => {
+    //     waterMaterial.setWaveSimulationParams(2.0, 0.965, 0.001);
+    //   },
+    //   'Ocean': () => {
+    //     waterMaterial.setWaveSimulationParams(1.5, 0.99, 0.0005);
+    //   },
+    //   'Pond': () => {
+    //     waterMaterial.setWaveSimulationParams(2.5, 0.96, 0.002);
+    //   },
+    //   'Oil': () => {
+    //     waterMaterial.setWaveSimulationParams(1.0, 0.995, 0.0001);
+    //   },
+    //   'Mercury': () => {
+    //     waterMaterial.setWaveSimulationParams(4.0, 0.93, 0.004);
+    //   }
+    // };
+
+    // Add presets to GUI
+    // const presetController = waterPhysicsFolder.add(
+    //   { preset: 'Default' },
+    //   'preset',
+    //   Object.keys(waterPresets)
+    // ).name('Water Type');
+
+    // presetController.onChange((value: string) => {
+    //   const presetFunction = waterPresets[value];
+    //   if (presetFunction) {
+    //     presetFunction();
+
+    //     // Update GUI controllers to match the new values
+    //     // This requires keeping references to the controllers
+    //   }
+    // });
+
+    waterPhysicsFolder.open();
+  }
+
+  public get backgroundColor(): THREE.Color {
+    return this._mBackgroundColor;
+  }
+
+  public set backgroundColor(v: string) {
+    this._mBackgroundColor = new THREE.Color(v);
+    this.updateBackgrounds();
+  }
+
+  public get planeControlsChanged() {
+    const changed = this._planeControlsChanged;
+    this._planeControlsChanged = false;
+    return changed;
+  }
+
+  public set planeControlsChanged(v: boolean) {
+    this._planeControlsChanged = v;
+  }
+
+  public get color(): THREE.Color {
+    return this._mColor;
+  }
+
+  public set color(v: THREE.Color) {
+    this._mColor = v;
+  }
+
+  public get baseColor(): THREE.Color {
+    return this._mBaseColor;
+  }
+
+  public set baseColor(v: THREE.Color) {
+    this._mBaseColor = v;
+  }
+
+  public get barRingForegroundColor(): THREE.Color {
+    return this._mBarRingForegroundColor;
+  }
+
+  public set barRingForegroundColor(v: THREE.Color) {
+    this._mBarRingForegroundColor = v;
+  }
+
+  public get barRingBackgroundColor(): THREE.Color {
+    return this._mBarRingBackgroundColor;
+  }
+
+  public set barRingBackgroundColor(v: THREE.Color) {
+    this._mBarRingBackgroundColor = v;
+  }
+
+  public get barRingOpacity(): number {
+    return this._mBarRingOpacity;
+  }
+
+  public set barRingOpacity(v: number) {
+    this._mBarRingOpacity = v;
+  }
+
+  public get event(): number {
+    return this._mEvent;
+  }
+
+  public set event(v: number) {
+    this._mEvent = v;
+  }
+
+  public get eventIntensity(): number {
+    return this._mEventIntensity;
+  }
+
+  public set eventIntensity(v: number) {
+    this._mEventIntensity = v;
+  }
+
+  public get barRingCount(): number {
+    return this._mBarRingCount;
+  }
+
+  public set barRingCount(v: number) {
+    this._mBarRingCount = v;
+  }
+
+  public get barRingSpeed(): THREE.Vector2 {
+    return this._mBarRingSpeed;
+  }
+
+  public set barRingSpeed(v: THREE.Vector2) {
+    this._mBarRingSpeed = v;
+  }
+
+  public get barRingAngle(): number {
+    return this._mBarRingAngle;
+  }
+
+  public set barRingAngle(v: number) {
+    this._mBarRingAngle = v;
+  }
+
+  public get triggerTimedEvent(): number {
+    const eventDuration = this._mTriggerTimedEvent;
+    this.triggerTimedEvent = 0.0;
+    return eventDuration;
+  }
+
+  public set triggerTimedEvent(v: number) {
+    this._mTriggerTimedEvent = v;
+  }
+
   // Laser getters/setters
-  // Getters and setters for the laser arrays
+
   public get laserIntensities(): number[] {
     return this._mLaserIntensities;
   }
@@ -1090,6 +1188,7 @@ export class GUIManager {
   }
 
   // Pool light getters/setters
+
   public get poolLightIntensity(): number {
     return this._mPoolLightIntensity;
   }
@@ -1104,33 +1203,24 @@ export class GUIManager {
     this._mPoolLightRadius = v;
   }
 
-  public get planeMaterial(): PlaneMaterial | null {
+  public get planeMaterial(): PlaneMaterial | WaterShaderMaterial | null {
     return this._planeMaterial;
   }
 
-  public set planeMaterial(material: PlaneMaterial | null) {
+  public set planeMaterial(
+    material: PlaneMaterial | WaterShaderMaterial | null
+  ) {
     this._planeMaterial = material;
 
     // Change parent mesh material
     this._parentRef.setGUIControlledMeshesMaterial(material);
   }
 
-  public get planeMaterials(): Map<string, PlaneMaterial> {
+  public get planeMaterials(): Map<
+    string,
+    PlaneMaterial | WaterShaderMaterial
+  > {
     return this._planeMaterials;
-  }
-
-  public addPlaneMaterial(material: PlaneMaterial, name: string): void {
-    this._planeMaterials.set(name, material);
-  }
-
-  public listPlaneMaterials(): void {
-    console.log(Array.from(this._planeMaterials));
-  }
-
-  private returnFocusToRenderer(): void {
-    setTimeout(() => {
-      this._renderer.domElement.focus();
-    }, 0);
   }
 
   public update(): void {
@@ -1157,6 +1247,10 @@ export class GUIManager {
       activeLasers: this.activeLasers,
       poolLightIntensity: this.poolLightIntensity,
       poolLightRadius: this.poolLightRadius,
+
+      waveSpeed: this._mWaveSpeed,
+      wavePersistence: this._mWavePersistence,
+      waveBaselineCorrection: this._mWaveBaselineCorrection,
 
       triggerTimedEvent: this.triggerTimedEvent,
     });

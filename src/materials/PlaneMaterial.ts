@@ -47,6 +47,20 @@ interface PlaneOptions {
   uniforms?: Uniforms;
 }
 
+export interface IPlaneMaterialParameters {
+  color?: string | THREE.Color;
+  baseColor?: string | THREE.Color;
+  barRingForegroundColor?: string | THREE.Color;
+  barRingBackgroundColor?: string | THREE.Color;
+  barRingOpacity?: number;
+  event?: number;
+  eventIntensity?: number;
+  barRingCount?: number;
+  barRingSpeedX?: number;
+  barRingSpeedY?: number;
+  barRingAngle?: number;
+}
+
 export class PlaneMaterial extends THREE.RawShaderMaterial {
   private _clock: THREE.Clock;
   private _time: number = DEFAULT_UNIFORMS.time;
@@ -462,15 +476,6 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
     cameraPosition?: THREE.Vector3;
     lightPosition?: THREE.Vector3;
     lightColor?: THREE.Color;
-    // Add new water-specific parameters
-    laserIntensities?: number[];
-    laserWidths?: number[];
-    laserColors?: THREE.Color[];
-    laserOrigins?: THREE.Vector3[];
-    laserDirections?: THREE.Vector3[];
-    poolLightIntensity?: number;
-    poolLightRadius?: number;
-    activeLasers?: number;
   }): { updatedUniforms: string[] } {
     const updatedUniforms: string[] = [];
 
