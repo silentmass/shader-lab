@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { WebGLRenderer } from "three";
-import {
+import PlaneMaterial, {
+  DEFAULT_PLANE_UNIFORMS,
   IPlaneMaterialParameters,
-  PlaneMaterial,
 } from "./materials/PlaneMaterial";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { ShaderLab } from "./ShaderLab";
@@ -11,7 +11,7 @@ import {
   IWaterShaderMaterialParameters,
   WaterShaderMaterial,
 } from "./materials/water/waterShaderMaterial";
-import { DEFAULT_SIMULATION_UPDATE_UNIFORMS } from "./materials/water/watersimulation";
+import { DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS } from "./materials/water/watersimulation";
 
 // Define an interface for material parameters
 // Just a no change comment
@@ -20,16 +20,16 @@ export interface IMaterialParameters
     IWaterShaderMaterialParameters {}
 
 const DEFAULT_MATERIAL_SETTINGS = {
-  color: new THREE.Color("pink"),
-  baseColor: new THREE.Color("#2F646A"),
-  barRingForegroundColor: new THREE.Color("#6A452F"),
-  barRingBackgroundColor: new THREE.Color("#90BDC3"),
-  barRingOpacity: 1.0,
-  event: 3,
-  eventIntensity: 1.0,
-  barRingCount: 10,
-  barRingSpeed: new THREE.Vector2(1.0, 0.0),
-  barRingAngle: 0.0,
+  color: DEFAULT_PLANE_UNIFORMS.color,
+  baseColor: DEFAULT_PLANE_UNIFORMS.baseColor,
+  barRingForegroundColor: DEFAULT_PLANE_UNIFORMS.barRingForegroundColor,
+  barRingBackgroundColor: DEFAULT_PLANE_UNIFORMS.barRingBackgroundColor,
+  barRingOpacity: DEFAULT_PLANE_UNIFORMS.barRingOpacity,
+  event: DEFAULT_PLANE_UNIFORMS.event,
+  eventIntensity: DEFAULT_PLANE_UNIFORMS.eventIntensity,
+  barRingCount: DEFAULT_PLANE_UNIFORMS.barRingCount,
+  barRingSpeed: DEFAULT_PLANE_UNIFORMS.speed,
+  barRingAngle: DEFAULT_PLANE_UNIFORMS.angle,
   triggerTimedEvent: 0.0,
   laserIntensities: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.intensity),
   laserWidths: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.width),
@@ -38,7 +38,7 @@ const DEFAULT_MATERIAL_SETTINGS = {
   laserDirections: DEFAULT_WATER_UNIFORMS.lasers.map((e) => e.direction),
   poolLightIntensity: DEFAULT_WATER_UNIFORMS.poolLightIntensity,
   poolLightRadius: DEFAULT_WATER_UNIFORMS.poolLightRadius,
-  ...DEFAULT_SIMULATION_UPDATE_UNIFORMS,
+  ...DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS,
 };
 
 export class GUIManager {

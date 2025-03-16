@@ -2,20 +2,19 @@ import * as THREE from "three";
 import { stripVersion } from "./MaterialUtils";
 
 // Define default values at the module level
-const DEFAULT_UNIFORMS = {
+export const DEFAULT_PLANE_UNIFORMS = {
   time: 1.0,
-  color: new THREE.Color(0x00cccc),
-  // baseColor: new THREE.Color("grey"),
+  color: new THREE.Color("pink"),
   baseColor: new THREE.Color("red"),
   barRingForegroundColor: new THREE.Color("blue"),
   barRingBackgroundColor: new THREE.Color("red"),
   barRingOpacity: 1.0,
-  event: 0,
+  event: 3,
   eventIntensity: 1.0,
   eventProgress: 0.0,
   barRingCount: 40.0,
   speed: new THREE.Vector2(1.0, 0.0),
-  angle: Math.PI / 1.0,
+  angle: 1.0,
   texture: null as THREE.Texture | null,
   geometryCenter: new THREE.Vector3(0, 0, 0),
   cameraPosition: new THREE.Vector3(8, 5, 5),
@@ -61,35 +60,35 @@ export interface IPlaneMaterialParameters {
   barRingAngle?: number;
 }
 
-export class PlaneMaterial extends THREE.RawShaderMaterial {
+export default class PlaneMaterial extends THREE.RawShaderMaterial {
   private _clock: THREE.Clock;
-  private _time: number = DEFAULT_UNIFORMS.time;
-  private _color: THREE.Color = DEFAULT_UNIFORMS.color.clone();
-  private _baseColor: THREE.Color = DEFAULT_UNIFORMS.baseColor.clone();
+  private _time: number = DEFAULT_PLANE_UNIFORMS.time;
+  private _color: THREE.Color = DEFAULT_PLANE_UNIFORMS.color.clone();
+  private _baseColor: THREE.Color = DEFAULT_PLANE_UNIFORMS.baseColor.clone();
   private _barRingForegroundColor: THREE.Color =
-    DEFAULT_UNIFORMS.barRingForegroundColor.clone();
+    DEFAULT_PLANE_UNIFORMS.barRingForegroundColor.clone();
   private _barRingBackgroundColor: THREE.Color =
-    DEFAULT_UNIFORMS.barRingBackgroundColor.clone();
-  private _barRingOpacity: number = DEFAULT_UNIFORMS.barRingOpacity;
-  private _barRingCount: number = DEFAULT_UNIFORMS.barRingCount;
-  private _speed: THREE.Vector2 = DEFAULT_UNIFORMS.speed.clone();
-  private _angle: number = DEFAULT_UNIFORMS.angle;
-  private _texture: THREE.Texture | null = DEFAULT_UNIFORMS.texture;
+    DEFAULT_PLANE_UNIFORMS.barRingBackgroundColor.clone();
+  private _barRingOpacity: number = DEFAULT_PLANE_UNIFORMS.barRingOpacity;
+  private _barRingCount: number = DEFAULT_PLANE_UNIFORMS.barRingCount;
+  private _speed: THREE.Vector2 = DEFAULT_PLANE_UNIFORMS.speed.clone();
+  private _angle: number = DEFAULT_PLANE_UNIFORMS.angle;
+  private _texture: THREE.Texture | null = DEFAULT_PLANE_UNIFORMS.texture;
   private _geometryCenter: THREE.Vector3 =
-    DEFAULT_UNIFORMS.geometryCenter.clone();
+    DEFAULT_PLANE_UNIFORMS.geometryCenter.clone();
   private _cameraPosition: THREE.Vector3 =
-    DEFAULT_UNIFORMS.cameraPosition.clone();
+    DEFAULT_PLANE_UNIFORMS.cameraPosition.clone();
   private _lightPosition: THREE.Vector3 =
-    DEFAULT_UNIFORMS.lightPosition.clone();
-  private _lightColor: THREE.Color = DEFAULT_UNIFORMS.lightColor.clone();
+    DEFAULT_PLANE_UNIFORMS.lightPosition.clone();
+  private _lightColor: THREE.Color = DEFAULT_PLANE_UNIFORMS.lightColor.clone();
 
   // For timed events
   private _eventStartTime: number = 0;
   private _eventDuration: number = 0;
   private _eventActive: boolean = false;
-  private _event: number = DEFAULT_UNIFORMS.event;
-  private _eventIntensity: number = DEFAULT_UNIFORMS.eventIntensity;
-  private _eventProgress: number = DEFAULT_UNIFORMS.eventProgress;
+  private _event: number = DEFAULT_PLANE_UNIFORMS.event;
+  private _eventIntensity: number = DEFAULT_PLANE_UNIFORMS.eventIntensity;
+  private _eventProgress: number = DEFAULT_PLANE_UNIFORMS.eventProgress;
 
   constructor(
     vertexShader: string,
@@ -98,66 +97,79 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
   ) {
     // Initialize all uniform values, using defaults when needed
     const uniforms = {
-      uTime: { value: options?.uniforms?.uTime ?? DEFAULT_UNIFORMS.time },
+      uTime: { value: options?.uniforms?.uTime ?? DEFAULT_PLANE_UNIFORMS.time },
       uColor: {
         value:
-          options?.uniforms?.uColor?.clone() ?? DEFAULT_UNIFORMS.color.clone(),
+          options?.uniforms?.uColor?.clone() ??
+          DEFAULT_PLANE_UNIFORMS.color.clone(),
       },
       uBaseColor: {
         value:
           options?.uniforms?.uBaseColor?.clone() ??
-          DEFAULT_UNIFORMS.baseColor.clone(),
+          DEFAULT_PLANE_UNIFORMS.baseColor.clone(),
       },
       uBarRingForegroundColor: {
         value:
           options?.uniforms?.uBarRingForegroundColor?.clone() ??
-          DEFAULT_UNIFORMS.barRingForegroundColor.clone(),
+          DEFAULT_PLANE_UNIFORMS.barRingForegroundColor.clone(),
       },
       uBarRingBackgroundColor: {
         value:
           options?.uniforms?.uBarRingBackgroundColor?.clone() ??
-          DEFAULT_UNIFORMS.barRingBackgroundColor.clone(),
+          DEFAULT_PLANE_UNIFORMS.barRingBackgroundColor.clone(),
       },
       uBarRingOpacity: {
         value:
-          options?.uniforms?.uBarRingOpacity ?? DEFAULT_UNIFORMS.barRingOpacity,
+          options?.uniforms?.uBarRingOpacity ??
+          DEFAULT_PLANE_UNIFORMS.barRingOpacity,
       },
-      uEvent: { value: options?.uniforms?.uEvent ?? DEFAULT_UNIFORMS.event },
+      uEvent: {
+        value: options?.uniforms?.uEvent ?? DEFAULT_PLANE_UNIFORMS.event,
+      },
       uEventIntensity: {
         value:
-          options?.uniforms?.uEventIntensity ?? DEFAULT_UNIFORMS.eventIntensity,
+          options?.uniforms?.uEventIntensity ??
+          DEFAULT_PLANE_UNIFORMS.eventIntensity,
       },
       uEventProgress: {
         value:
-          options?.uniforms?.uEventProgress ?? DEFAULT_UNIFORMS.eventProgress,
+          options?.uniforms?.uEventProgress ??
+          DEFAULT_PLANE_UNIFORMS.eventProgress,
       },
       uBarRingCount: {
         value:
-          options?.uniforms?.uBarRingCount ?? DEFAULT_UNIFORMS.barRingCount,
+          options?.uniforms?.uBarRingCount ??
+          DEFAULT_PLANE_UNIFORMS.barRingCount,
       },
       uSpeed: {
         value:
-          options?.uniforms?.uSpeed?.clone() ?? DEFAULT_UNIFORMS.speed.clone(),
+          options?.uniforms?.uSpeed?.clone() ??
+          DEFAULT_PLANE_UNIFORMS.speed.clone(),
       },
-      uAngle: { value: options?.uniforms?.uAngle ?? DEFAULT_UNIFORMS.angle },
+      uAngle: {
+        value: options?.uniforms?.uAngle ?? DEFAULT_PLANE_UNIFORMS.angle,
+      },
       uTexture: {
-        value: options?.uniforms?.uTexture ?? DEFAULT_UNIFORMS.texture,
+        value: options?.uniforms?.uTexture ?? DEFAULT_PLANE_UNIFORMS.texture,
       },
       uGeometryCenter: {
         value:
           options?.uniforms?.uGeometryCenter?.clone() ??
-          DEFAULT_UNIFORMS.geometryCenter,
+          DEFAULT_PLANE_UNIFORMS.geometryCenter,
       },
       uCameraPosition: {
         value:
-          options?.uniforms?.uCameraPosition ?? DEFAULT_UNIFORMS.cameraPosition,
+          options?.uniforms?.uCameraPosition ??
+          DEFAULT_PLANE_UNIFORMS.cameraPosition,
       },
       uLightPosition: {
         value:
-          options?.uniforms?.uLightPosition ?? DEFAULT_UNIFORMS.lightPosition,
+          options?.uniforms?.uLightPosition ??
+          DEFAULT_PLANE_UNIFORMS.lightPosition,
       },
       uLightColor: {
-        value: options?.uniforms?.uLightColor ?? DEFAULT_UNIFORMS.lightColor,
+        value:
+          options?.uniforms?.uLightColor ?? DEFAULT_PLANE_UNIFORMS.lightColor,
       },
     };
 
@@ -225,23 +237,23 @@ export class PlaneMaterial extends THREE.RawShaderMaterial {
    * Resets all uniforms to their default values
    */
   public resetToDefaults(): void {
-    this.setColor(DEFAULT_UNIFORMS.color.clone());
-    this.setBaseColor(DEFAULT_UNIFORMS.baseColor.clone());
+    this.setColor(DEFAULT_PLANE_UNIFORMS.color.clone());
+    this.setBaseColor(DEFAULT_PLANE_UNIFORMS.baseColor.clone());
     this.setBarRingForegroundColor(
-      DEFAULT_UNIFORMS.barRingForegroundColor.clone()
+      DEFAULT_PLANE_UNIFORMS.barRingForegroundColor.clone()
     );
     this.setBarRingBackgroundColor(
-      DEFAULT_UNIFORMS.barRingBackgroundColor.clone()
+      DEFAULT_PLANE_UNIFORMS.barRingBackgroundColor.clone()
     );
-    this.setBarRingOpacity(DEFAULT_UNIFORMS.barRingOpacity);
-    this.setEvent(DEFAULT_UNIFORMS.event);
-    this.setEventIntensity(DEFAULT_UNIFORMS.eventIntensity);
-    this.setBarRingCount(DEFAULT_UNIFORMS.barRingCount);
-    this.setSpeed(DEFAULT_UNIFORMS.speed.clone());
-    this.setAngle(DEFAULT_UNIFORMS.angle);
-    this.setGeometryCenter(DEFAULT_UNIFORMS.geometryCenter.clone());
-    this.setLightPosition(DEFAULT_UNIFORMS.lightPosition.clone());
-    this.setLightColor(DEFAULT_UNIFORMS.lightColor.clone());
+    this.setBarRingOpacity(DEFAULT_PLANE_UNIFORMS.barRingOpacity);
+    this.setEvent(DEFAULT_PLANE_UNIFORMS.event);
+    this.setEventIntensity(DEFAULT_PLANE_UNIFORMS.eventIntensity);
+    this.setBarRingCount(DEFAULT_PLANE_UNIFORMS.barRingCount);
+    this.setSpeed(DEFAULT_PLANE_UNIFORMS.speed.clone());
+    this.setAngle(DEFAULT_PLANE_UNIFORMS.angle);
+    this.setGeometryCenter(DEFAULT_PLANE_UNIFORMS.geometryCenter.clone());
+    this.setLightPosition(DEFAULT_PLANE_UNIFORMS.lightPosition.clone());
+    this.setLightColor(DEFAULT_PLANE_UNIFORMS.lightColor.clone());
 
     // Reset event state
     this._eventActive = false;

@@ -7,7 +7,7 @@ import normalFragmentShader from "../../glsl/water/simulation/normal.frag";
 import updateFragmentShader from "../../glsl/water/simulation/update.frag";
 import { stripVersion } from "../MaterialUtils";
 
-export const DEFAULT_SIMULATION_UPDATE_UNIFORMS = {
+export const DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS = {
   waterTexture: null,
   waveSpeed: 0.2,
   wavePersistence: 0.985,
@@ -57,16 +57,16 @@ export default class WaterSimulation {
 
     this._waterTexture =
       waterSimulationUpdateUniforms.waterTexture ||
-      DEFAULT_SIMULATION_UPDATE_UNIFORMS.waterTexture;
+      DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS.waterTexture;
     this._waveSpeed =
       waterSimulationUpdateUniforms.waveSpeed ??
-      DEFAULT_SIMULATION_UPDATE_UNIFORMS.waveSpeed;
+      DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS.waveSpeed;
     this._wavePersistence =
       waterSimulationUpdateUniforms.wavePersistence ??
-      DEFAULT_SIMULATION_UPDATE_UNIFORMS.wavePersistence;
+      DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS.wavePersistence;
     this._waveBaselineCorrection =
       waterSimulationUpdateUniforms.waveBaselineCorrection ??
-      DEFAULT_SIMULATION_UPDATE_UNIFORMS.waveBaselineCorrection;
+      DEFAULT_WATER_SIMULATION_UPDATE_UNIFORMS.waveBaselineCorrection;
 
     // Create drop shader - adds drops to water
     const dropMaterial = new THREE.RawShaderMaterial({

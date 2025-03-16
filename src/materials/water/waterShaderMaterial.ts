@@ -10,9 +10,8 @@ import waterWaterVertexShader from "../../glsl/water/water/water.vert";
 import waterWaterFragmentShader from "../../glsl/water/water/water.frag";
 import { Caustics } from "./caustics.ts";
 import WaterSimulation from "./watersimulation.ts";
-import {
+import PlaneMaterial, {
   IPlaneMaterialParameters,
-  PlaneMaterial,
   Uniforms,
 } from "../PlaneMaterial";
 import { stripVersion } from "../MaterialUtils.ts";

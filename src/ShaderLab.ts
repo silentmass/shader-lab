@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { StatsManager } from "./StatsManager";
-import { PlaneMaterial } from "./materials/PlaneMaterial";
+import PlaneMaterial from "./materials/PlaneMaterial";
 import { GUIManager } from "./GUIManager";
 import {
   MeshUniformsManager,
