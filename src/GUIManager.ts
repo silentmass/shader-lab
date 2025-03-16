@@ -59,6 +59,9 @@ export class GUIManager {
   private _keyEventMap: Map<string, () => void> = new Map();
   private _keyEventActive: boolean = true;
 
+  private _toneOscillator: Tone.Oscillator | null = null;
+  private _toneTransportStarted: boolean = false;
+
   // Background settings
   private _backgroundColor: THREE.Color = new THREE.Color("#000000");
 
@@ -183,6 +186,57 @@ export class GUIManager {
   }
 
   /**
+   * Play a sound event with Tone.js
+   * @param frequency Frequency of the oscillator (Hz)
+   * @param duration Duration of the sound (seconds)
+   */
+  public playToneEvent(): void {
+    // Import Tone at the top of your file:
+    // import * as Tone from 'tone';
+
+    // Make sure previous oscillators are disposed
+    this.disposeToneResources();
+
+    // Create a new oscillator
+    this._toneOscillator = new Tone.Oscillator({
+      frequency: 10000,
+      type: "sine",
+      // volume: -10, // Starting at a lower volume to prevent loudness
+    }).toDestination();
+
+    // Use scheduled events instead of transport for simple triggers
+    const now = Tone.now();
+    this._toneOscillator.sync().start().stop("0.001");
+    Tone.getTransport().start(now).stop("+1.0");
+
+    Tone.getTransport().loop = true;
+    Tone.getTransport().loopEnd = 1 / 40;
+
+    // Set up automatic cleanup after the sound is done
+    setTimeout(() => {
+      this.disposeToneResources();
+    }, 1.0 * 1000 + 100); // Add small buffer for cleanup
+  }
+
+  /**
+   * Clean up Tone.js resources
+   */
+  private disposeToneResources(): void {
+    // Dispose of oscillator if it exists
+    if (this._toneOscillator) {
+      this._toneOscillator.dispose();
+      this._toneOscillator = null;
+    }
+
+    // Stop transport if it was started
+    if (this._toneTransportStarted) {
+      Tone.getTransport().stop();
+      Tone.getTransport().cancel(); // Cancel all scheduled events
+      this._toneTransportStarted = false;
+    }
+  }
+
+  /**
    * Initialize keyboard event handlers
    */
   private setupKeyEventHandlers(): void {
@@ -191,14 +245,19 @@ export class GUIManager {
       this.triggerEvent(2.0);
       console.log("Event triggered with Space key");
 
-      const synthA = new Tone.FMSynth().toDestination();
-      // const osc = new Tone.Oscillator(220, "sine")
-      //   .toDestination()
-      //   .start()
-      //   .stop("+0.5");
+      // const synthA = new Tone.FMSynth().toDestination();
+      // const osc = new Tone.Oscillator(10000, "sine").toDestination();
+      // osc.sync().start().stop("0.001");
+
+      // Tone.getTransport().start().stop("+1.0");
+      // // set it to loop once a second
+      // Tone.getTransport().loop = true;
+      // Tone.getTransport().loopEnd = 1 / 40;
+
+      this.playToneEvent();
 
       // all loops start when the Transport is started
-      synthA.triggerAttackRelease("c2", "8n");
+      // synthA.triggerAttackRelease("c2", "8n");
     });
 
     this.registerKeyEvent("KeyE", () => {
@@ -1425,6 +1484,8 @@ export class GUIManager {
 
   // Public methods for external control
   public dispose(): void {
+    this.disposeToneResources();
+
     // Remove event listener when disposing
     document.removeEventListener("keydown", this.handleKeyDown.bind(this));
 
