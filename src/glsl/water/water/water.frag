@@ -259,16 +259,12 @@ void main() {
   vec4 info = texture(water, coord);
 
   /* make water look more "peaked" */
-  // for (int i = 0; i < 5; i++) {
-  //   coord += info.ba * 0.005;
-  //   info = texture(water, coord);
-  // }
-
-  /* make water look more "peaked" */
-  for (int i = 0; i < 8; i++) { // Increase from 5 to 8 iterations
-    coord += info.ba * 0.004; // Reduce from 0.005 to 0.004 for subtler effect
+  for (int i = 0; i < 5; i++) {
+    coord += info.ba * 0.005;
     info = texture(water, coord);
   }
+
+  
 
   vec3 normal = vec3(info.b, sqrt(1.0 - dot(info.ba, info.ba)), info.a);
   vec3 incomingRay = normalize(vPos - vEye);
@@ -286,8 +282,8 @@ void main() {
   } else {
     vec3 reflectedRay = reflect(incomingRay, normal);
     vec3 refractedRay = refract(incomingRay, normal, IOR_AIR / IOR_WATER);
-    // float fresnel = mix(0.25, 1.0, pow(1.0 - dot(normal, -incomingRay), 3.0));
-    float fresnel = mix(0.8, 1.0, pow(1.0 - dot(normal, -incomingRay), 5.0)); 
+    float fresnel = mix(0.25, 1.0, pow(1.0 - dot(normal, -incomingRay), 3.0));
+    // float fresnel = mix(0.5, 1.0, pow(1.0 - dot(normal, -incomingRay), 3.2)); 
 
     vec3 reflectedColor = getSurfaceRayColor(vPos, reflectedRay, abovewaterColor);
     vec3 refractedColor = getSurfaceRayColor(vPos, refractedRay, abovewaterColor);
