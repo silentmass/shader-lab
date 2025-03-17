@@ -191,9 +191,6 @@ export class GUIManager {
    * @param duration Duration of the sound (seconds)
    */
   public playToneEvent(): void {
-    // Import Tone at the top of your file:
-    // import * as Tone from 'tone';
-
     // Make sure previous oscillators are disposed
     this.disposeToneResources();
 
@@ -205,17 +202,14 @@ export class GUIManager {
     }).toDestination();
 
     // Use scheduled events instead of transport for simple triggers
-    const now = Tone.now();
+    Tone.getTransport().cancel(); // Clear all previous events
+    Tone.getTransport().stop();
     this._toneOscillator.sync().start().stop("0.001");
-    Tone.getTransport().start(now).stop("+1.0");
 
+    const now = Tone.now();
+    Tone.getTransport().start(now).stop("+1.0");
     Tone.getTransport().loop = true;
     Tone.getTransport().loopEnd = 1 / 40;
-
-    // Set up automatic cleanup after the sound is done
-    setTimeout(() => {
-      this.disposeToneResources();
-    }, 1.0 * 1000 + 100); // Add small buffer for cleanup
   }
 
   /**
